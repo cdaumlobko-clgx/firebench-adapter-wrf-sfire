@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "firebench-adapter-wrf-sfire"
+version = "0.1.0a"
+authors = [
+    {name = "Aurélien Costes", email = "aurelien.costes31@gmail.com"},
+]
+maintainers = [
+    {name = "Aurélien Costes", email = "aurelien.costes31@gmail.com"},
+]
+description = "firebench-adapter-wrf-sfire provides a FireBench adapter for the WRF-SFIRE model"
+dependencies = [
+    "numpy < 3.0",
+    "netCDF4
+]
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = [
+    # How mature is this project? Common values are
+    #   3 - Alpha
+    #   4 - Beta
+    #   5 - Production/Stable
+    "Development Status :: 3 - Alpha",
+
+    # Specify the Python versions you support here.
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+
+    # Pick your license as you wish (see also "license" above)
+    "License :: OSI Approved :: Apache Software License",
+]
+[project.optional-dependencies]
+dev = [
+    "bandit",
+    "black",
+    "pylint",
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+]
+[tool.hatch.envs.default]
+features = ["dev"]
