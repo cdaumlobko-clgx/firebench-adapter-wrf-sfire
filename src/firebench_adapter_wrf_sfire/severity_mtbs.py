@@ -34,13 +34,25 @@ def __compute_severity_from_fuel_frac(
 
 
 def get_mtbs_severity_surf(
-    fb_h5: h5py.File,
+    new_h5: h5py.File,
+    obs_h5: h5py.File,
     mtbs_group_path: str,
     wrf_dataset: Dataset,
     method: str = "fuel_frac",
     severity_thresholds: np.ndarray = SEVERITY_TH_DEFAULT,
     fire_grid_bound: int = 25,
 ):
+    def __write_group_new_file(severity_data: np.ndarray):
+        raster_2d = new_h5.create_group(mtbs_group_path)
+        raster_2d.attrs["crs"] = mtbs_crs
+        var = raster_2d.create_dataset("position_lat", data=mtbs_lat)
+        var.attrs["units"] = "degree"
+        var = raster_2d.create_dataset("position_lon", data=mtbs_lon)
+        var.attrs["units"] = "degree"
+        var = raster_2d.create_dataset("fire_burn_severity", data=severity_data)
+        var.attrs["units"] = "dimensionless"
+        var.attrs["_FillValue"] = 0
+    
     # get SFIRE data
     xlat = np.array(
         wrf_dataset["FXLAT"][0, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound]
@@ -51,17 +63,19 @@ def get_mtbs_severity_surf(
 
     Ny, Nx = xlat.shape
     # get data from std file
-    mtbs_lat = fb_h5[f"{mtbs_group_path}/position_lat"][:, :]
-    mtbs_lon = fb_h5[f"{mtbs_group_path}/position_lon"][:, :]
-    mtbs_crs = fb_h5[f"{mtbs_group_path}"].attrs["crs"]
+    mtbs_lat = obs_h5[f"{mtbs_group_path}/position_lat"][:, :]
+    mtbs_lon = obs_h5[f"{mtbs_group_path}/position_lon"][:, :]
+    mtbs_crs = obs_h5[f"{mtbs_group_path}"].attrs["crs"]
 
     if method == "fuel_frac":
         fuel_frac = wrf_dataset["FUEL_FRAC"][
             -1, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound
         ]
         SFIRE_severity = __compute_severity_from_fuel_frac(Nx, Ny, fuel_frac, severity_thresholds)
-        return nearest_2d(
+        severity_interp = nearest_2d(
             SFIRE_severity, xlon, xlat, mtbs_lon, mtbs_lat
         )
+        __write_group_new_file(severity_interp)
+        return
 
     raise NotImplementedError(f"{method} not supported")
