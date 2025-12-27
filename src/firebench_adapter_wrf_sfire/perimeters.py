@@ -10,7 +10,7 @@ from pathlib import Path
 from os.path import getsize
 
 
-def get_perimeter_from_t_ign_g(
+def get_perimeters_from_t_ign_g(
     new_h5: h5py.File,
     obs_h5: h5py.File,
     wrf_dataset: Dataset,

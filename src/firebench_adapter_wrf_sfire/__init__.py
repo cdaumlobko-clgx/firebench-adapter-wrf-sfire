@@ -1,7 +1,7 @@
 from importlib.metadata import version, PackageNotFoundError
 
 from .building_damage import get_building_damage
-from .perimeters import get_perimeter_from_t_ign_g
+from .perimeters import get_perimeters_from_t_ign_g
 from .ravg import get_ravg_cc
 from .severity_mtbs import get_mtbs_severity_surf
 
