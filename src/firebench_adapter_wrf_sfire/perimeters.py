@@ -19,7 +19,7 @@ def get_perimeters_from_t_ign_g(
     fire_grid_bound: int = 25,
 ):
     KML_DIR = "kml"
-    Path(".").mkdir(f"{KML_DIR}", exist_ok=True)
+    Path(KML_DIR).mkdir(parents=True, exist_ok=True)
     origin = datetime.fromisoformat(t_ign_g_ref_time)
 
     xlat = np.array(
