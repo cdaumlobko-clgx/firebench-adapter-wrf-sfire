@@ -35,7 +35,7 @@ def get_perimeters_from_t_ign_g(
         time_s = (obs_datetime - origin).total_seconds()
         print(f"Perimeter {perim_path} after {time_s} s")
         perim_sfire = ft.array_to_geopolygons(t_ign_g, xlon, xlat, time_s)
-        sfire_kml_filename = f"{KML_DIR}/SFIRE_{fs.sanitize_iso8601(fs.datetime_to_iso8601(obs_datetime))}"
+        sfire_kml_filename = f"{KML_DIR}/SFIRE_{fs.sanitize_iso8601(fs.datetime_to_iso8601(obs_datetime))}.kml"
         perim_sfire.to_file(sfire_kml_filename, driver="KML", layer="fire_perimeter")
 
         grp = new_h5.create_group(perim_path)
