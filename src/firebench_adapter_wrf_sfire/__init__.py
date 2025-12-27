@@ -1,6 +1,8 @@
 from importlib.metadata import version, PackageNotFoundError
-from .severity_mtbs import get_mtbs_severity_surf
+
 from .building_damage import get_building_damage
+from .ravg import get_ravg_cc
+from .severity_mtbs import get_mtbs_severity_surf
 
 try:
     __version__ = version("firebench-adapter-wrf-sfire")
