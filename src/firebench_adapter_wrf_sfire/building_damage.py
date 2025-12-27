@@ -50,7 +50,7 @@ def get_building_damage(
 
     if method == "fire_area":
         fire_area = wrf_dataset["FIRE_AREA"][
-            0, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound
+            -1, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound
         ]
         sfire_building_damaged = []
         for k in range(N_buildings):
