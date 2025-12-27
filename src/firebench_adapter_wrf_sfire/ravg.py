@@ -5,25 +5,27 @@ import h5py
 from netCDF4 import Dataset
 from firebench_adapter_common.interpolation import nearest_2d
 
+
 @njit(fastmath=True)
 def __compute_canopy_cover_loss_from_cfb(Nx, Ny, fire_area, cfb):
     ccl = np.zeros_like(fire_area, dtype=np.uint8)
     for j in range(Ny):
         for i in range(Nx):
-            if fire_area[j,i] < 0.5:
-                ccl[j,i] = 9 # Outide burn area
-            elif cfb[j,i] >= 0.75:
-                ccl[j,i] = 5 # 75-100%
-            elif cfb[j,i] >= 0.5:
-                ccl[j,i] = 4 # 50-<75%
-            elif cfb[j,i] >= 0.25:
-                ccl[j,i] = 3 # 25-<50%
-            elif cfb[j,i] > 0.:
-                ccl[j,i] = 2 # >0-<25%
+            if fire_area[j, i] < 0.5:
+                ccl[j, i] = 9  # Outide burn area
+            elif cfb[j, i] >= 0.75:
+                ccl[j, i] = 5  # 75-100%
+            elif cfb[j, i] >= 0.5:
+                ccl[j, i] = 4  # 50-<75%
+            elif cfb[j, i] >= 0.25:
+                ccl[j, i] = 3  # 25-<50%
+            elif cfb[j, i] > 0.0:
+                ccl[j, i] = 2  # >0-<25%
             else:
-                ccl[j,i] = 1 # 0%
-    
+                ccl[j, i] = 1  # 0%
+
     return ccl
+
 
 def get_ravg_cc(
     new_h5: h5py.File,
@@ -70,9 +72,7 @@ def get_ravg_cc(
             -1, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound
         ]
         try:
-            cfb = wrf_dataset["CFB"][
-            -1, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound
-        ]
+            cfb = wrf_dataset["CFB"][-1, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound]
         except:
             print("WARNING: CFB not found in wrfout file. Replaced by zeros.")
             cfb = np.zeros_like(fire_area)
