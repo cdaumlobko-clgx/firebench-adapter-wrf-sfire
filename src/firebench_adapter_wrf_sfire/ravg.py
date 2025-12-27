@@ -6,11 +6,11 @@ from netCDF4 import Dataset
 from firebench_adapter_common.interpolation import nearest_2d
 
 @njit(fastmath=True)
-def __compute_canopy_cover_loss_from_cfb(Nx, Ny, fuel_frac, cfb):
-    ccl = np.zeros_like(fuel_frac, dtype=np.uint8)
+def __compute_canopy_cover_loss_from_cfb(Nx, Ny, fire_area, cfb):
+    ccl = np.zeros_like(fire_area, dtype=np.uint8)
     for j in range(Ny):
         for i in range(Nx):
-            if fuel_frac[j,i] < 0.5:
+            if fire_area[j,i] < 0.5:
                 ccl[j,i] = 9 # Outide burn area
             elif cfb[j,i] >= 0.75:
                 ccl[j,i] = 5 # 75-100%
@@ -66,7 +66,7 @@ def get_ravg_cc(
     obs_crs = obs_h5[f"{ravg_group_path}"].attrs["crs"]
 
     if method == "cfb":
-        fuel_frac = wrf_dataset["FUEL_FRAC"][
+        fire_area = wrf_dataset["FIRE_AREA"][
             -1, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound
         ]
         try:
@@ -75,8 +75,8 @@ def get_ravg_cc(
         ]
         except:
             print("WARNING: CFB not found in wrfout file. Replaced by zeros.")
-            cfb = np.zeros_like(fuel_frac)
-        SFIRE_canopy_cover_loss = __compute_canopy_cover_loss_from_cfb(Nx, Ny, fuel_frac, cfb)
+            cfb = np.zeros_like(fire_area)
+        SFIRE_canopy_cover_loss = __compute_canopy_cover_loss_from_cfb(Nx, Ny, fire_area, cfb)
         ccl_interp = nearest_2d(SFIRE_canopy_cover_loss, xlon, xlat, obs_lon, obs_lat)
         __write_group_new_file(ccl_interp)
         return
