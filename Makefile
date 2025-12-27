@@ -7,11 +7,11 @@ test:
 
 # Run all tests with coverage report
 test-cov:
-	pytest --cov-report term-missing --cov=src/firebench-adapter-wrf-sfire
+	pytest --cov-report term-missing --cov=src/firebench_adapter_wrf_sfire
 
 # Run pylint analysis
 lint:
-	pylint src/firebench-adapter-wrf-sfire --rcfile=.pylintrc
+	pylint src/firebench_adapter_wrf_sfire --rcfile=.pylintrc
 
 # Update pylint score in README.md
 update-lint-score:
@@ -19,14 +19,14 @@ update-lint-score:
 
 # Run black code formatting
 code-formatting:
-	black --line-length 108 src/firebench-adapter-wrf-sfire
+	black --line-length 108 src/firebench_adapter_wrf_sfire
 	black --line-length 108 tests
 	black --line-length 108 .github/actions
 	black --line-length 108 workflow
 
 # Run bandit analysis
 bandit:
-	bandit -r src/firebench-adapter-wrf-sfire --severity-level high --confidence-level high
+	bandit -r src/firebench_adapter_wrf_sfire --severity-level high --confidence-level high
 
 # Update documentation
 update-docs-changelog:
