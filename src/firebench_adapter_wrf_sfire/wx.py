@@ -199,6 +199,8 @@ def __process_weather_station(
                 svn.AIR_TEMPERATURE.value, data=sfire_t2_interp, **hdf5plugin.Zstd(clevel=compression_lvl)
             )
             var.attrs["units"] = "degK"
+        else:
+            print("No method for other height than 2m")
 
 
 def get_weather_stations(
