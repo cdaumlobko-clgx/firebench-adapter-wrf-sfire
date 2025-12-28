@@ -82,30 +82,42 @@ def __process_weather_station(
     station = obs_h5[station_path]
     if svn.AIR_TEMPERATURE.value in station.keys():
         print("Process air temperature")
-        i_nearest, j_nearest = find_nearest_grid_point(
-            Nx,
-            Ny,
-            obs_h5[station_path].attrs["position_lat"],
-            obs_h5[station_path].attrs["position_lon"],
-            xlat,
-            xlon,
-            min_dlat,
-            min_dlon,
-        )
-        sfire_raw_t2 = wrf_dataset["T2"][i_start : i_end + 1, j_nearest, i_nearest]
-        f = interp1d(
-            time_sfire[i_start : i_end + 1],
-            sfire_raw_t2,
-            kind="linear",
-            bounds_error=True,
-            fill_value=np.nan,  # or "extrapolate"
-            assume_sorted=True,
-        )
-        sfire_t2_interp = f(time_in_period)
-        new_wx.create_dataset(
-            svn.AIR_TEMPERATURE.value, data=sfire_t2_interp, **hdf5plugin.Zstd(clevel=compression_lvl)
-        )
-        var.attrs["units"] = "degC"
+        # Verify T2
+        if np.isclose(
+            Quantity(
+                float(obs_h5[f"{station_path}/{svn.AIR_TEMPERATURE.value}"].attrs["sensor_height"]),
+                obs_h5[f"{station_path}/{svn.AIR_TEMPERATURE.value}"].attrs["sensor_height_units"],
+            )
+            .to("m")
+            .magnitude,
+            2,
+            atol=0.1,
+        ):
+            print("Nearest T2")
+            i_nearest, j_nearest = find_nearest_grid_point(
+                Nx,
+                Ny,
+                obs_h5[station_path].attrs["position_lat"],
+                obs_h5[station_path].attrs["position_lon"],
+                xlat,
+                xlon,
+                min_dlat,
+                min_dlon,
+            )
+            sfire_raw_t2 = wrf_dataset["T2"][i_start : i_end + 1, j_nearest, i_nearest]
+            f = interp1d(
+                time_sfire[i_start : i_end + 1],
+                sfire_raw_t2,
+                kind="linear",
+                bounds_error=True,
+                fill_value=np.nan,
+                assume_sorted=True,
+            )
+            sfire_t2_interp = f(time_in_period)
+            new_wx.create_dataset(
+                svn.AIR_TEMPERATURE.value, data=sfire_t2_interp, **hdf5plugin.Zstd(clevel=compression_lvl)
+            )
+            var.attrs["units"] = "degK"
 
 
 def get_weather_stations(
