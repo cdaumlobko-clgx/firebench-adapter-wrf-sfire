@@ -9,6 +9,7 @@ from bisect import bisect_left, bisect_right
 from firebench_adapter_common.interpolation import find_nearest_grid_point
 from scipy.interpolate import interp1d
 
+
 def __get_time_vector_s(
     obs_h5: h5py.File,
     station_path: str,
@@ -63,9 +64,7 @@ def __process_weather_station(
         if attr in obs_h5[station_path].attrs.keys():
             new_wx.attrs[attr] = obs_h5[station_path].attrs[attr]
 
-    var = new_wx.create_dataset(
-            "time", data=time_in_period, **hdf5plugin.Zstd(clevel=compression_lvl)
-        )
+    var = new_wx.create_dataset("time", data=time_in_period, **hdf5plugin.Zstd(clevel=compression_lvl))
     var.attrs["time_origin"] = fs.datetime_to_iso8601(period_start_dt)
     var.attrs["time_units"] = "s"
 
@@ -93,20 +92,22 @@ def __process_weather_station(
             min_dlat,
             min_dlon,
         )
-        sfire_raw_t2 = wrf_dataset["T2"][i_start: i_end, j_nearest, i_nearest]
+        print(wrf_dataset["T2"].shape)
+        print(i_start, i_end, j_nearest, i_nearest)
+        sfire_raw_t2 = wrf_dataset["T2"][i_start:i_end, j_nearest, i_nearest]
         f = interp1d(
-            time_sfire[i_start:i_end], sfire_raw_t2,
+            time_sfire[i_start:i_end],
+            sfire_raw_t2,
             kind="linear",
             bounds_error=True,
-            fill_value=np.nan,   # or "extrapolate"
-            assume_sorted=True
+            fill_value=np.nan,  # or "extrapolate"
+            assume_sorted=True,
         )
         sfire_t2_interp = f(time_in_period)
         new_wx.create_dataset(
             svn.AIR_TEMPERATURE.value, data=sfire_t2_interp, **hdf5plugin.Zstd(clevel=compression_lvl)
         )
         var.attrs["units"] = "degC"
-
 
 
 def get_weather_stations(
