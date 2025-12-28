@@ -24,6 +24,9 @@ def __get_time_vector_s(
 
 def __process_T(wrf_dataset: Dataset,):
     print(wrf_dataset["T2"].shape)
+    print(wrf_dataset["XTIME"].shape)
+    print(wrf_dataset["XTIME"][0])
+    print(wrf_dataset["XTIME"][-1])
 
 def __process_weather_station(
     new_h5: h5py.File,
