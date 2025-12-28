@@ -92,11 +92,9 @@ def __process_weather_station(
             min_dlat,
             min_dlon,
         )
-        print(wrf_dataset["T2"].shape)
-        print(i_start, i_end, j_nearest, i_nearest)
-        sfire_raw_t2 = wrf_dataset["T2"][i_start:i_end, j_nearest, i_nearest]
+        sfire_raw_t2 = wrf_dataset["T2"][i_start : i_end + 1, j_nearest, i_nearest]
         f = interp1d(
-            time_sfire[i_start:i_end],
+            time_sfire[i_start : i_end + 1],
             sfire_raw_t2,
             kind="linear",
             bounds_error=True,
