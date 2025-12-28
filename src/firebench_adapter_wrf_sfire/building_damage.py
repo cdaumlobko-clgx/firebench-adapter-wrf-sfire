@@ -60,7 +60,7 @@ def get_building_damage(
                 continue
 
             i_nearest, j_nearest = find_nearest_grid_point(
-                Nx, Ny, k, building_lat, building_lon, xlat, xlon, min_dlat, min_dlon
+                Nx, Ny, building_lat[k], building_lon[k], xlat, xlon, min_dlat, min_dlon
             )
 
             if fire_area[j_nearest, i_nearest] >= 0.5:
