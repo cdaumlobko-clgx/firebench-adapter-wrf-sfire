@@ -139,6 +139,7 @@ def __process_weather_station(
         "position_lat_units",
         "position_lon_units",
     ]
+    I_FMC_10h = 1
     time_in_period = _time_in_period_seconds(obs_h5, station_path, period_start_dt, period_end_dt)
     if len(time_in_period) == 0:
         print("No data in time period. Skip")
@@ -166,6 +167,7 @@ def __process_weather_station(
     min_dlon = np.min(np.diff(xlon, axis=1))
 
     station = obs_h5[station_path]
+    # Air temperature
     if svn.AIR_TEMPERATURE.value in station.keys():
         print("Process air temperature")
         # Verify T2
@@ -201,6 +203,31 @@ def __process_weather_station(
             var.attrs["units"] = "degK"
         else:
             print("No method for other height than 2m")
+
+    # Fuel Moisture 10h
+    if svn.FUEL_MOISTURE_CONTENT_10H.value in station.keys():
+        print("Process fmc 10h")
+        i_nearest, j_nearest = find_nearest_grid_point(
+            Nx,
+            Ny,
+            obs_h5[station_path].attrs["position_lat"],
+            obs_h5[station_path].attrs["position_lon"],
+            xlat,
+            xlon,
+            min_dlat,
+            min_dlon,
+        )
+        sfire_fmc10h_interp = _interp_linear_1d_strict(
+            time_sfire[i_start : i_end + 1],
+            wrf_dataset["FMC_GC"][i_start : i_end + 1, I_FMC_10h, j_nearest, i_nearest],
+            time_in_period,
+        )
+        var = new_wx.create_dataset(
+            svn.FUEL_MOISTURE_CONTENT_10H.value,
+            data=sfire_fmc10h_interp,
+            **hdf5plugin.Zstd(clevel=compression_lvl),
+        )
+        var.attrs["units"] = "dimensionless"
 
 
 def get_weather_stations(
