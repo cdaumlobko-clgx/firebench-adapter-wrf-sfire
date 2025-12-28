@@ -45,6 +45,10 @@ def __process_weather_station(
 ):
     time_in_period = __get_time_vector_s(obs_h5, station_path, period_start_dt, period_end_dt)
 
+    if len(time_in_period) == 0:
+        print("No data in time period. Skip")
+        return
+
     offset_start = (period_start_dt - sfire_ref_time).total_seconds()
     time_sfire = (
         Quantity(np.array(wrf_dataset["XTIME"][:], dtype=np.float64), "min").to("s").magnitude
