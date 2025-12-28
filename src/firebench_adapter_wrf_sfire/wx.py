@@ -9,6 +9,7 @@ from pathlib import Path
 from firebench import Quantity, svn
 from bisect import bisect_left, bisect_right
 
+
 def __get_time_vector_s(
     obs_h5: h5py.File,
     station_path: str,
@@ -22,11 +23,15 @@ def __get_time_vector_s(
     offset_end = (period_end_dt - dt_origin).total_seconds()
     return np.array([t for t in time_vec if t >= offset_start and t <= offset_end], dtype=np.float64)
 
-def __process_T(wrf_dataset: Dataset,):
+
+def __process_T(
+    wrf_dataset: Dataset,
+):
     print(wrf_dataset["T2"].shape)
     print(wrf_dataset["XTIME"].shape)
     print(wrf_dataset["XTIME"][0])
     print(wrf_dataset["XTIME"][-1])
+
 
 def __process_weather_station(
     new_h5: h5py.File,
@@ -39,12 +44,17 @@ def __process_weather_station(
     fire_grid_bound: int,
 ):
     time_in_period = __get_time_vector_s(obs_h5, station_path, period_start_dt, period_end_dt)
-    
-    offset_start = (period_start_dt - sfire_ref_time).total_seconds()
-    time_sfire = Quantity(np.array(wrf_dataset["XTIME"][:], dtype=np.float64), "min").to("s").magnitude - offset_start
-    i_start = bisect_right(time_sfire, time_in_period[0]) - 1
-    i_end   = bisect_left(time_sfire, time_in_period[-1])
 
+    offset_start = (period_start_dt - sfire_ref_time).total_seconds()
+    time_sfire = (
+        Quantity(np.array(wrf_dataset["XTIME"][:], dtype=np.float64), "min").to("s").magnitude
+        - offset_start
+    )
+    i_start = bisect_right(time_sfire, time_in_period[0]) - 1
+    i_end = bisect_left(time_sfire, time_in_period[-1])
+
+    print(time_in_period[0], time_in_period[-1])
+    print(time_sfire[0], time_sfire[-1])
     print(i_start, i_end)
     if i_start < 0 or i_end >= len(time_sfire):
         raise ValueError("Reference time outside model time range")
