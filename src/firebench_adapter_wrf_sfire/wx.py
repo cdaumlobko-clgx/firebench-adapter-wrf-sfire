@@ -70,10 +70,10 @@ def __process_weather_station(
 
     # get SFIRE data
     xlat = np.array(
-        wrf_dataset["FXLAT"][0, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound]
+        wrf_dataset["XLAT"][0, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound]
     )
     xlon = np.array(
-        wrf_dataset["FXLONG"][0, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound]
+        wrf_dataset["XLONG"][0, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound]
     )
     Ny, Nx = xlat.shape
     min_dlat = np.min(np.diff(xlat, axis=0))
