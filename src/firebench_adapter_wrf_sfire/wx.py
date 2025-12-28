@@ -122,6 +122,21 @@ def _interp_linear_1d_strict(x: np.ndarray, y: np.ndarray, xq: np.ndarray) -> np
     return f(xq)
 
 
+def _rh_from_wrf_q2_t2_psfc(q2_mixratio, t2_k, psfc_pa):
+    eps = 0.622
+    p_hpa = 0.01 * psfc_pa
+
+    # vapor pressure from mixing ratio (hPa)
+    e_hpa = (q2_mixratio * p_hpa) / (eps + q2_mixratio)
+
+    # saturation vapor pressure over water (Tetens, hPa)
+    t_c = t2_k - 273.15
+    es_hpa = 6.112 * np.exp((17.67 * t_c) / (t_c + 243.5))
+
+    rh = 100.0 * (e_hpa / es_hpa)
+    return rh
+
+
 def __process_weather_station(
     new_h5: h5py.File,
     obs_h5: h5py.File,
@@ -201,6 +216,48 @@ def __process_weather_station(
                 svn.AIR_TEMPERATURE.value, data=sfire_t2_interp, **hdf5plugin.Zstd(clevel=compression_lvl)
             )
             var.attrs["units"] = "degK"
+        else:
+            print("No method for other height than 2m")
+
+    # Relative Humidity
+    if svn.RELATIVE_HUMIDITY.value in station.keys():
+        print("Process RH2")
+        # Verify RH2
+        if np.isclose(
+            Quantity(
+                float(obs_h5[f"{station_path}/{svn.RELATIVE_HUMIDITY.value}"].attrs["sensor_height"]),
+                obs_h5[f"{station_path}/{svn.RELATIVE_HUMIDITY.value}"].attrs["sensor_height_units"],
+            )
+            .to("m")
+            .magnitude,
+            2,
+            atol=0.1,
+        ):
+            print("Nearest RH2")
+            i_nearest, j_nearest = find_nearest_grid_point(
+                Nx,
+                Ny,
+                obs_h5[station_path].attrs["position_lat"],
+                obs_h5[station_path].attrs["position_lon"],
+                xlat,
+                xlon,
+                min_dlat,
+                min_dlon,
+            )
+            t2_raw = (wrf_dataset["T2"][i_start : i_end + 1, j_nearest, i_nearest],)
+            q2_raw = (wrf_dataset["Q2"][i_start : i_end + 1, j_nearest, i_nearest],)
+            psfc_raw = (wrf_dataset["PSFC"][i_start : i_end + 1, j_nearest, i_nearest],)
+            sfire_data_interp = _interp_linear_1d_strict(
+                time_sfire[i_start : i_end + 1],
+                _rh_from_wrf_q2_t2_psfc(q2_raw, t2_raw, psfc_raw),
+                time_in_period,
+            )
+            var = new_wx.create_dataset(
+                svn.RELATIVE_HUMIDITY.value,
+                data=sfire_data_interp,
+                **hdf5plugin.Zstd(clevel=compression_lvl),
+            )
+            var.attrs["units"] = "percent"
         else:
             print("No method for other height than 2m")
 
