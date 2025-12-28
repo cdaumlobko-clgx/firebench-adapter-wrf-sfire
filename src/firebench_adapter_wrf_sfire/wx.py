@@ -137,6 +137,21 @@ def _rh_from_wrf_q2_t2_psfc(q2_mixratio, t2_k, psfc_pa):
     return rh
 
 
+def wind_dir_from_uv(u, v):
+    """
+    Compute meteorological wind direction.
+    u: zonal wind (m/s), +east
+    v: meridional wind (m/s), +north
+    returns degrees in [0, 360)
+    """
+    wd = np.degrees(np.arctan2(-u, -v))
+    return (wd + 360) % 360
+
+
+def wind_speed(u, v):
+    return np.sqrt(u**2 + v**2)
+
+
 def __process_weather_station(
     new_h5: h5py.File,
     obs_h5: h5py.File,
@@ -244,9 +259,9 @@ def __process_weather_station(
                 min_dlat,
                 min_dlon,
             )
-            t2_raw = (wrf_dataset["T2"][i_start : i_end + 1, j_nearest, i_nearest],)
-            q2_raw = (wrf_dataset["Q2"][i_start : i_end + 1, j_nearest, i_nearest],)
-            psfc_raw = (wrf_dataset["PSFC"][i_start : i_end + 1, j_nearest, i_nearest],)
+            t2_raw = wrf_dataset["T2"][i_start : i_end + 1, j_nearest, i_nearest]
+            q2_raw = wrf_dataset["Q2"][i_start : i_end + 1, j_nearest, i_nearest]
+            psfc_raw = wrf_dataset["PSFC"][i_start : i_end + 1, j_nearest, i_nearest]
             sfire_data_interp = _interp_linear_1d_strict(
                 time_sfire[i_start : i_end + 1],
                 _rh_from_wrf_q2_t2_psfc(q2_raw, t2_raw, psfc_raw),
@@ -258,6 +273,139 @@ def __process_weather_station(
                 **hdf5plugin.Zstd(clevel=compression_lvl),
             )
             var.attrs["units"] = "percent"
+        else:
+            print("No method for other height than 2m")
+
+    # Wind direction
+    if svn.WIND_DIRECTION.value in station.keys():
+        print("Process RH2")
+        # Verify RH2
+        if np.isclose(
+            Quantity(
+                float(obs_h5[f"{station_path}/{svn.WIND_DIRECTION.value}"].attrs["sensor_height"]),
+                obs_h5[f"{station_path}/{svn.WIND_DIRECTION.value}"].attrs["sensor_height_units"],
+            )
+            .to("m")
+            .magnitude,
+            10,
+            atol=0.1,
+        ):
+            print("Nearest WD10")
+            i_nearest, j_nearest = find_nearest_grid_point(
+                Nx,
+                Ny,
+                obs_h5[station_path].attrs["position_lat"],
+                obs_h5[station_path].attrs["position_lon"],
+                xlat,
+                xlon,
+                min_dlat,
+                min_dlon,
+            )
+            u10_raw = wrf_dataset["U10"][i_start : i_end + 1, j_nearest, i_nearest]
+            v10_raw = wrf_dataset["V10"][i_start : i_end + 1, j_nearest, i_nearest]
+            cosalpha_raw = wrf_dataset["COSALPHA"][i_start : i_end + 1, j_nearest, i_nearest]
+            sinalpha_raw = wrf_dataset["SINALPHA"][i_start : i_end + 1, j_nearest, i_nearest]
+            u_true = u10_raw * cosalpha_raw - v10_raw * sinalpha_raw
+            v_true = u10_raw * sinalpha_raw + v10_raw * cosalpha_raw
+            wind_dir_raw = wind_dir_from_uv(u_true, v_true)
+            sfire_data_interp = _interp_linear_1d_strict(
+                time_sfire[i_start : i_end + 1],
+                wind_dir_raw,
+                time_in_period,
+            )
+            var = new_wx.create_dataset(
+                svn.RELATIVE_HUMIDITY.value,
+                data=sfire_data_interp,
+                **hdf5plugin.Zstd(clevel=compression_lvl),
+            )
+            var.attrs["units"] = "degree"
+        else:
+            print("No method for other height than 2m")
+    # Wind direction
+    if svn.WIND_DIRECTION.value in station.keys():
+        print("Process wind direction")
+        # Verify RH2
+        if np.isclose(
+            Quantity(
+                float(obs_h5[f"{station_path}/{svn.WIND_DIRECTION.value}"].attrs["sensor_height"]),
+                obs_h5[f"{station_path}/{svn.WIND_DIRECTION.value}"].attrs["sensor_height_units"],
+            )
+            .to("m")
+            .magnitude,
+            10,
+            atol=0.1,
+        ):
+            print("Nearest WD10")
+            i_nearest, j_nearest = find_nearest_grid_point(
+                Nx,
+                Ny,
+                obs_h5[station_path].attrs["position_lat"],
+                obs_h5[station_path].attrs["position_lon"],
+                xlat,
+                xlon,
+                min_dlat,
+                min_dlon,
+            )
+            u10_raw = wrf_dataset["U10"][i_start : i_end + 1, j_nearest, i_nearest]
+            v10_raw = wrf_dataset["V10"][i_start : i_end + 1, j_nearest, i_nearest]
+            cosalpha_raw = wrf_dataset["COSALPHA"][i_start : i_end + 1, j_nearest, i_nearest]
+            sinalpha_raw = wrf_dataset["SINALPHA"][i_start : i_end + 1, j_nearest, i_nearest]
+            u_true = u10_raw * cosalpha_raw - v10_raw * sinalpha_raw
+            v_true = u10_raw * sinalpha_raw + v10_raw * cosalpha_raw
+            wind_dir_raw = wind_dir_from_uv(u_true, v_true)
+            sfire_data_interp = _interp_linear_1d_strict(
+                time_sfire[i_start : i_end + 1],
+                wind_dir_raw,
+                time_in_period,
+            )
+            var = new_wx.create_dataset(
+                svn.WIND_DIRECTION.value,
+                data=sfire_data_interp,
+                **hdf5plugin.Zstd(clevel=compression_lvl),
+            )
+            var.attrs["units"] = "degree"
+        else:
+            print("No method for other height than 10m")
+
+    # Wind speed
+    if svn.WIND_SPEED.value in station.keys():
+        print("Process wind speed")
+        # Verify RH2
+        if np.isclose(
+            Quantity(
+                float(obs_h5[f"{station_path}/{svn.WIND_SPEED.value}"].attrs["sensor_height"]),
+                obs_h5[f"{station_path}/{svn.WIND_SPEED.value}"].attrs["sensor_height_units"],
+            )
+            .to("m")
+            .magnitude,
+            10,
+            atol=0.1,
+        ):
+            print("Nearest WS10")
+            i_nearest, j_nearest = find_nearest_grid_point(
+                Nx,
+                Ny,
+                obs_h5[station_path].attrs["position_lat"],
+                obs_h5[station_path].attrs["position_lon"],
+                xlat,
+                xlon,
+                min_dlat,
+                min_dlon,
+            )
+            u10_raw = wrf_dataset["U10"][i_start : i_end + 1, j_nearest, i_nearest]
+            v10_raw = wrf_dataset["V10"][i_start : i_end + 1, j_nearest, i_nearest]
+            wind_speed_raw = wind_speed(u10_raw, v10_raw)
+            sfire_data_interp = _interp_linear_1d_strict(
+                time_sfire[i_start : i_end + 1],
+                wind_speed_raw,
+                time_in_period,
+            )
+            var = new_wx.create_dataset(
+                svn.WIND_SPEED.value,
+                data=sfire_data_interp,
+                **hdf5plugin.Zstd(clevel=compression_lvl),
+            )
+            var.attrs["units"] = "m/s"
         else:
             print("No method for other height than 2m")
 
