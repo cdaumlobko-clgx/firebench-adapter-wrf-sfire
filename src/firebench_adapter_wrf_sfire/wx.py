@@ -278,51 +278,6 @@ def __process_weather_station(
 
     # Wind direction
     if svn.WIND_DIRECTION.value in station.keys():
-        print("Process RH2")
-        # Verify RH2
-        if np.isclose(
-            Quantity(
-                float(obs_h5[f"{station_path}/{svn.WIND_DIRECTION.value}"].attrs["sensor_height"]),
-                obs_h5[f"{station_path}/{svn.WIND_DIRECTION.value}"].attrs["sensor_height_units"],
-            )
-            .to("m")
-            .magnitude,
-            10,
-            atol=0.1,
-        ):
-            print("Nearest WD10")
-            i_nearest, j_nearest = find_nearest_grid_point(
-                Nx,
-                Ny,
-                obs_h5[station_path].attrs["position_lat"],
-                obs_h5[station_path].attrs["position_lon"],
-                xlat,
-                xlon,
-                min_dlat,
-                min_dlon,
-            )
-            u10_raw = wrf_dataset["U10"][i_start : i_end + 1, j_nearest, i_nearest]
-            v10_raw = wrf_dataset["V10"][i_start : i_end + 1, j_nearest, i_nearest]
-            cosalpha_raw = wrf_dataset["COSALPHA"][i_start : i_end + 1, j_nearest, i_nearest]
-            sinalpha_raw = wrf_dataset["SINALPHA"][i_start : i_end + 1, j_nearest, i_nearest]
-            u_true = u10_raw * cosalpha_raw - v10_raw * sinalpha_raw
-            v_true = u10_raw * sinalpha_raw + v10_raw * cosalpha_raw
-            wind_dir_raw = wind_dir_from_uv(u_true, v_true)
-            sfire_data_interp = _interp_linear_1d_strict(
-                time_sfire[i_start : i_end + 1],
-                wind_dir_raw,
-                time_in_period,
-            )
-            var = new_wx.create_dataset(
-                svn.RELATIVE_HUMIDITY.value,
-                data=sfire_data_interp,
-                **hdf5plugin.Zstd(clevel=compression_lvl),
-            )
-            var.attrs["units"] = "degree"
-        else:
-            print("No method for other height than 2m")
-    # Wind direction
-    if svn.WIND_DIRECTION.value in station.keys():
         print("Process wind direction")
         # Verify RH2
         if np.isclose(
@@ -407,7 +362,7 @@ def __process_weather_station(
             )
             var.attrs["units"] = "m/s"
         else:
-            print("No method for other height than 2m")
+            print("No method for other height than 10m")
 
     # Fuel Moisture 10h
     if svn.FUEL_MOISTURE_CONTENT_10H.value in station.keys():
