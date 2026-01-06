@@ -121,6 +121,34 @@ def _interp_linear_1d_strict(x: np.ndarray, y: np.ndarray, xq: np.ndarray) -> np
     )
     return f(xq)
 
+def _sensor_height_check_ok(sensor_height: float, min_height_ok: float=None, max_height_ok: float=None, reference_height_ok: float=None, sym_distance_ok: float=None):
+    """
+    Validate whether a sensor height is within an acceptable interval.
+
+    Supported interval definitions:
+    - [min_height_ok, max_height_ok]
+    - [reference_height_ok - sym_distance_ok, reference_height_ok + sym_distance_ok]
+    """
+    if min_height_ok is not None or max_height_ok is not None:
+        if min_height_ok is None or max_height_ok is None:
+            raise ValueError("Both min_height_ok and max_height_ok must be provided")
+
+        if reference_height_ok is not None or sym_distance_ok is not None:
+            raise ValueError("Cannot mix min/max and symmetric interval definitions")
+
+        return min_height_ok <= sensor_height <= max_height_ok
+
+    if reference_height_ok is not None or sym_distance_ok is not None:
+        if reference_height_ok is None or sym_distance_ok is None:
+            raise ValueError("Both reference_height_ok and sym_distance_ok must be provided")
+
+        return (
+            reference_height_ok - sym_distance_ok
+            <= sensor_height
+            <= reference_height_ok + sym_distance_ok
+        )
+
+    raise ValueError("No valid height interval definition provided")
 
 def _rh_from_wrf_q2_t2_psfc(q2_mixratio, t2_k, psfc_pa):
     eps = 0.622
@@ -200,16 +228,12 @@ def __process_weather_station(
     # Air temperature
     if svn.AIR_TEMPERATURE.value in station.keys():
         print("Process air temperature")
-        # Verify T2
-        if np.isclose(
-            Quantity(
-                float(obs_h5[f"{station_path}/{svn.AIR_TEMPERATURE.value}"].attrs["sensor_height"]),
-                obs_h5[f"{station_path}/{svn.AIR_TEMPERATURE.value}"].attrs["sensor_height_units"],
-            )
-            .to("m")
-            .magnitude,
-            2,
-            atol=0.1,
+        # Use T2 within interval 0m to 4m
+        if _sensor_height_check_ok(
+            sensor_height=
+            fs.read_quantity_from_fb_attribute(f"{station_path}/{svn.AIR_TEMPERATURE.value}", "sensor_height", obs_h5).to("m").magnitude,
+            min_height_ok=0,
+            max_height_ok=4,
         ):
             print("Nearest T2")
             i_nearest, j_nearest = find_nearest_grid_point(
@@ -238,15 +262,11 @@ def __process_weather_station(
     if svn.RELATIVE_HUMIDITY.value in station.keys():
         print("Process RH2")
         # Verify RH2
-        if np.isclose(
-            Quantity(
-                float(obs_h5[f"{station_path}/{svn.RELATIVE_HUMIDITY.value}"].attrs["sensor_height"]),
-                obs_h5[f"{station_path}/{svn.RELATIVE_HUMIDITY.value}"].attrs["sensor_height_units"],
-            )
-            .to("m")
-            .magnitude,
-            2,
-            atol=0.1,
+        if _sensor_height_check_ok(
+            sensor_height=
+            fs.read_quantity_from_fb_attribute(f"{station_path}/{svn.RELATIVE_HUMIDITY.value}", "sensor_height", obs_h5).to("m").magnitude,
+            min_height_ok=0,
+            max_height_ok=4,
         ):
             print("Nearest RH2")
             i_nearest, j_nearest = find_nearest_grid_point(
@@ -279,18 +299,14 @@ def __process_weather_station(
     # Wind direction
     if svn.WIND_DIRECTION.value in station.keys():
         print("Process wind direction")
-        # Verify RH2
-        if np.isclose(
-            Quantity(
-                float(obs_h5[f"{station_path}/{svn.WIND_DIRECTION.value}"].attrs["sensor_height"]),
-                obs_h5[f"{station_path}/{svn.WIND_DIRECTION.value}"].attrs["sensor_height_units"],
-            )
-            .to("m")
-            .magnitude,
-            10,
-            atol=0.1,
+        # Verify WD10
+        if _sensor_height_check_ok(
+            sensor_height=
+            fs.read_quantity_from_fb_attribute(f"{station_path}/{svn.WIND_DIRECTION.value}", "sensor_height", obs_h5).to("m").magnitude,
+            min_height_ok=0,
+            max_height_ok=20,
         ):
-            print("Nearest WD10")
+            print("Nearest WD10 used for WD measured between 0m and 20m")
             i_nearest, j_nearest = find_nearest_grid_point(
                 Nx,
                 Ny,
@@ -325,18 +341,14 @@ def __process_weather_station(
     # Wind speed
     if svn.WIND_SPEED.value in station.keys():
         print("Process wind speed")
-        # Verify RH2
-        if np.isclose(
-            Quantity(
-                float(obs_h5[f"{station_path}/{svn.WIND_SPEED.value}"].attrs["sensor_height"]),
-                obs_h5[f"{station_path}/{svn.WIND_SPEED.value}"].attrs["sensor_height_units"],
-            )
-            .to("m")
-            .magnitude,
-            10,
-            atol=0.1,
+        # Use wind 10m for 10m sensors +/- 1m
+        if _sensor_height_check_ok(
+            sensor_height=
+            fs.read_quantity_from_fb_attribute(f"{station_path}/{svn.WIND_SPEED.value}", "sensor_height", obs_h5).to("m").magnitude,
+            reference_height_ok=10,
+            sym_distance_ok=1,
         ):
-            print("Nearest WS10")
+            print("Nearest WS10 for sensors at 10m +/- 1m")
             i_nearest, j_nearest = find_nearest_grid_point(
                 Nx,
                 Ny,
@@ -415,3 +427,5 @@ def get_weather_stations(
                 fire_grid_bound,
                 compression_lvl,
             )
+
+
