@@ -273,7 +273,7 @@ def __process_weather_station(
         # Use T2 within interval 0m to 4m
         if _sensor_height_check_ok(
             sensor_height=fs.read_quantity_from_fb_attribute(
-                f"{station_path}/{svn.AIR_TEMPERATURE.value}", "sensor_height", obs_h5
+                f"{station_path}/{svn.AIR_TEMPERATURE.value}", "sensor_height", obs_h5, dtype=float
             )
             .to("m")
             .magnitude,
@@ -309,7 +309,7 @@ def __process_weather_station(
         # Verify RH2
         if _sensor_height_check_ok(
             sensor_height=fs.read_quantity_from_fb_attribute(
-                f"{station_path}/{svn.RELATIVE_HUMIDITY.value}", "sensor_height", obs_h5
+                f"{station_path}/{svn.RELATIVE_HUMIDITY.value}", "sensor_height", obs_h5, dtype=float
             )
             .to("m")
             .magnitude,
@@ -350,7 +350,7 @@ def __process_weather_station(
         # Verify WD10
         if _sensor_height_check_ok(
             sensor_height=fs.read_quantity_from_fb_attribute(
-                f"{station_path}/{svn.WIND_DIRECTION.value}", "sensor_height", obs_h5
+                f"{station_path}/{svn.WIND_DIRECTION.value}", "sensor_height", obs_h5, dtype=float
             )
             .to("m")
             .magnitude,
@@ -394,7 +394,7 @@ def __process_weather_station(
         print("Process wind speed")
         sensor_height = (
             fs.read_quantity_from_fb_attribute(
-                f"{station_path}/{svn.WIND_SPEED.value}", "sensor_height", obs_h5
+                f"{station_path}/{svn.WIND_SPEED.value}", "sensor_height", obs_h5, dtype=float
             )
             .to("m")
             .magnitude
