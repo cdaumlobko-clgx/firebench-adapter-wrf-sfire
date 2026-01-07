@@ -17,7 +17,7 @@ def get_perimeters_from_t_ign_g(
     list_perimeter_paths: list[str],
     t_ign_g_ref_time: str,
     fire_grid_bound: int = 25,
-    kml_dir:str = "kml",
+    kml_dir: str = "kml",
     overwrite: bool = False,
 ):
     Path(kml_dir).mkdir(parents=True, exist_ok=True)
