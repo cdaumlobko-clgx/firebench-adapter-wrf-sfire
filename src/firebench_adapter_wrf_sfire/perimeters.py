@@ -38,8 +38,8 @@ def get_perimeters_from_t_ign_g(
         sfire_kml_path = Path(
             f"{kml_dir}", f"SFIRE_{fs.sanitize_iso8601(fs.datetime_to_iso8601(obs_datetime))}.kml"
         )
-        if not sfire_kml_path.exists() or overwrite:
-            sfire_kml_filename = sfire_kml_path.resolve()
+        sfire_kml_filename = sfire_kml_path.resolve()
+        if not sfire_kml_filename.exists() or overwrite:
             perim_sfire = ft.array_to_geopolygons(t_ign_g, xlon, xlat, time_s)
             perim_sfire.to_file(sfire_kml_filename, driver="KML", layer="fire_perimeter")
         else:
