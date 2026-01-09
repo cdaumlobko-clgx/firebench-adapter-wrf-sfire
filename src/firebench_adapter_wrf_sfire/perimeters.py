@@ -49,6 +49,6 @@ def get_perimeters_from_t_ign_g(
 
         grp = new_h5.create_group(perim_path)
         grp.attrs["time"] = fs.datetime_to_iso8601(obs_datetime)
-        grp.attrs["rel_path"] = sfire_kml_filename.as_posix()
+        grp.attrs["rel_path"] = sfire_kml_path.as_posix()
         grp.attrs["sha256"] = ft.calculate_sha256(sfire_kml_filename)
         grp.attrs["file_size_bytes"] = getsize(sfire_kml_filename)
