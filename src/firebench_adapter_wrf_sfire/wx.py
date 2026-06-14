@@ -246,6 +246,18 @@ def wind_speed(u, v):
     return np.sqrt(u**2 + v**2)
 
 
+def _get_wind_rotation(wrf_dataset: Dataset, time_slice, j: int, i: int):
+    """Return mesh rotation coefficients, defaulting to a Cartesian grid."""
+    if "COSALPHA" not in wrf_dataset.variables or "SINALPHA" not in wrf_dataset.variables:
+        print("COSALPHA/SINALPHA not found. Use Cartesian grid wind rotation.")
+        return 1.0, 0.0
+
+    return (
+        wrf_dataset["COSALPHA"][time_slice, j, i],
+        wrf_dataset["SINALPHA"][time_slice, j, i],
+    )
+
+
 def wind_from10m_with_roughness(s10, z, z0, z0_min=1e-4):
     z0_eff = np.maximum(z0, z0_min)
     z_eff = np.maximum(z, z0_eff)
@@ -425,8 +437,12 @@ def __process_weather_station(
             )
             u10_raw = wrf_dataset["U10"][i_start : i_end + 1, j_nearest, i_nearest]
             v10_raw = wrf_dataset["V10"][i_start : i_end + 1, j_nearest, i_nearest]
-            cosalpha_raw = wrf_dataset["COSALPHA"][i_start : i_end + 1, j_nearest, i_nearest]
-            sinalpha_raw = wrf_dataset["SINALPHA"][i_start : i_end + 1, j_nearest, i_nearest]
+            cosalpha_raw, sinalpha_raw = _get_wind_rotation(
+                wrf_dataset,
+                slice(i_start, i_end + 1),
+                j_nearest,
+                i_nearest,
+            )
             u_true = u10_raw * cosalpha_raw - v10_raw * sinalpha_raw
             v_true = u10_raw * sinalpha_raw + v10_raw * cosalpha_raw
             wind_dir_raw = wind_dir_from_uv(u_true, v_true)
