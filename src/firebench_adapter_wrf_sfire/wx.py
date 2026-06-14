@@ -3,7 +3,7 @@ import hdf5plugin
 import h5py
 from netCDF4 import Dataset
 import firebench.standardize as fs
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
 from firebench import Quantity, svn
 from bisect import bisect_left, bisect_right
 from firebench.adapter_common.interpolation import find_nearest_grid_point
@@ -12,10 +12,32 @@ from scipy.interpolate import interp1d
 GRAVITY = 9.81
 
 
+def _as_utc_datetime(dt: datetime) -> datetime:
+    """Return aware datetimes in UTC; leave naive datetimes unchanged."""
+    if dt.tzinfo is None:
+        return dt
+    return dt.astimezone(timezone.utc)
+
+
+def _datetime_fromisoformat_utc(value: str) -> datetime:
+    """Parse ISO-8601 datetimes, accepting trailing Z, and normalize aware values to UTC."""
+    return _as_utc_datetime(datetime.fromisoformat(value.replace("Z", "+00:00")))
+
+
+def _validate_matching_timezone(*datetimes: datetime):
+    """Avoid mixing aware UTC datetimes with naive wall-clock datetimes."""
+    has_tz = [dt.tzinfo is not None for dt in datetimes]
+    if any(has_tz) and not all(has_tz):
+        raise ValueError(
+            "Cannot mix timezone-aware and timezone-naive datetimes. "
+            "Use UTC consistently for sfire_ref_time, period bounds, and station time_origin."
+        )
+
+
 def _read_station_time_origin(obs_h5: h5py.File, station_path: str) -> datetime:
     """Read station time origin as datetime from HDF5 attributes."""
     station = obs_h5[station_path]
-    return datetime.fromisoformat(station["time"].attrs["time_origin"])
+    return _datetime_fromisoformat_utc(station["time"].attrs["time_origin"])
 
 
 def _station_time_vector_seconds(obs_h5: h5py.File, station_path: str) -> np.ndarray:
@@ -30,6 +52,10 @@ def _period_offsets_seconds(
     dt_origin: datetime, start_dt: datetime, end_dt: datetime
 ) -> tuple[float, float]:
     """Compute (start, end) offsets in seconds relative to dt_origin."""
+    _validate_matching_timezone(dt_origin, start_dt, end_dt)
+    dt_origin = _as_utc_datetime(dt_origin)
+    start_dt = _as_utc_datetime(start_dt)
+    end_dt = _as_utc_datetime(end_dt)
     offset_start = (start_dt - dt_origin).total_seconds()
     offset_end = (end_dt - dt_origin).total_seconds()
     return offset_start, offset_end
@@ -78,10 +104,25 @@ def _bracket_indices_inclusive(model_time: np.ndarray, ref_start: float, ref_end
     return i_start, i_end
 
 
-def _validate_bracket(i_start: int, i_end: int, model_time_len: int):
+def _validate_bracket(
+    i_start: int,
+    i_end: int,
+    model_time: np.ndarray,
+    ref_start: float,
+    ref_end: float,
+):
     """Raise if bracket falls outside model time range (same as existing check)."""
+    model_time_len = len(model_time)
     if i_start < 0 or i_end >= model_time_len:
-        print(i_start, i_end, model_time_len)
+        model_start = model_time[0] if model_time_len else np.nan
+        model_end = model_time[-1] if model_time_len else np.nan
+        print(
+            i_start,
+            i_end,
+            model_time_len,
+            f"ref=[{ref_start}, {ref_end}] s",
+            f"model=[{model_start}, {model_end}] s",
+        )
         raise ValueError("Reference time outside model time range")
 
 
@@ -242,10 +283,14 @@ def __process_weather_station(
         return
 
     # SFIRE time
+    _validate_matching_timezone(sfire_ref_time, period_start_dt, period_end_dt)
+    sfire_ref_time = _as_utc_datetime(sfire_ref_time)
+    period_start_dt = _as_utc_datetime(period_start_dt)
+    period_end_dt = _as_utc_datetime(period_end_dt)
     offset_start = (period_start_dt - sfire_ref_time).total_seconds()
     time_sfire = _sfire_time_seconds(wrf_dataset, offset_start)
     i_start, i_end = _bracket_indices_inclusive(time_sfire, time_in_period[0], time_in_period[-1])
-    _validate_bracket(i_start, i_end, len(time_sfire))
+    _validate_bracket(i_start, i_end, time_sfire, time_in_period[0], time_in_period[-1])
 
     # Add time to new group
     new_wx = _create_station_group_with_attrs(new_h5, obs_h5, station_path, STATION_ATTRS_TO_COPY)
@@ -492,7 +537,7 @@ def get_weather_stations(
     fire_grid_bound: int = 25,
     compression_lvl: int = 3,
 ):
-    origin = datetime.fromisoformat(sfire_ref_time)
+    origin = _datetime_fromisoformat_utc(sfire_ref_time)
     for ts in obs_h5[f"{fs.TIME_SERIES}"].keys():
         if ts.startswith("station_"):
             print(f"Process {ts}")
