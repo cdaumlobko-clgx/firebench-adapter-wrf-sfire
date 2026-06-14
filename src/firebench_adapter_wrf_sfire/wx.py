@@ -288,9 +288,13 @@ def __process_weather_station(
     period_start_dt = _as_utc_datetime(period_start_dt)
     period_end_dt = _as_utc_datetime(period_end_dt)
     offset_start = (period_start_dt - sfire_ref_time).total_seconds()
+    offset_station_to_period_start = (time_origin - period_start_dt).total_seconds()
+    time_in_period_sfire = time_in_period + offset_station_to_period_start
     time_sfire = _sfire_time_seconds(wrf_dataset, offset_start)
-    i_start, i_end = _bracket_indices_inclusive(time_sfire, time_in_period[0], time_in_period[-1])
-    _validate_bracket(i_start, i_end, time_sfire, time_in_period[0], time_in_period[-1])
+    i_start, i_end = _bracket_indices_inclusive(
+        time_sfire, time_in_period_sfire[0], time_in_period_sfire[-1]
+    )
+    _validate_bracket(i_start, i_end, time_sfire, time_in_period_sfire[0], time_in_period_sfire[-1])
 
     # Add time to new group
     new_wx = _create_station_group_with_attrs(new_h5, obs_h5, station_path, STATION_ATTRS_TO_COPY)
@@ -345,7 +349,7 @@ def __process_weather_station(
             sfire_t2_interp = _interp_linear_1d_strict(
                 time_sfire[i_start : i_end + 1],
                 wrf_dataset["T2"][i_start : i_end + 1, j_nearest, i_nearest],
-                time_in_period,
+                time_in_period_sfire,
             )
             var = new_wx.create_dataset(
                 svn.AIR_TEMPERATURE.value, data=sfire_t2_interp, **hdf5plugin.Zstd(clevel=compression_lvl)
@@ -384,7 +388,7 @@ def __process_weather_station(
             sfire_data_interp = _interp_linear_1d_strict(
                 time_sfire[i_start : i_end + 1],
                 _rh_from_wrf_q2_t2_psfc(q2_raw, t2_raw, psfc_raw),
-                time_in_period,
+                time_in_period_sfire,
             )
             var = new_wx.create_dataset(
                 svn.RELATIVE_HUMIDITY.value,
@@ -429,7 +433,7 @@ def __process_weather_station(
             sfire_data_interp = _interp_linear_1d_strict(
                 time_sfire[i_start : i_end + 1],
                 wind_dir_raw,
-                time_in_period,
+                time_in_period_sfire,
             )
             var = new_wx.create_dataset(
                 svn.WIND_DIRECTION.value,
@@ -480,7 +484,7 @@ def __process_weather_station(
         sfire_data_interp = _interp_linear_1d_strict(
             time_sfire[i_start : i_end + 1],
             ws,
-            time_in_period,
+            time_in_period_sfire,
         )
         var = new_wx.create_dataset(
             svn.WIND_SPEED.value,
@@ -491,7 +495,7 @@ def __process_weather_station(
         sfire_data_interp_10 = _interp_linear_1d_strict(
             time_sfire[i_start : i_end + 1],
             s10,
-            time_in_period,
+            time_in_period_sfire,
         )
         var.attrs["units"] = "m/s"
         var = new_wx.create_dataset(
@@ -517,7 +521,7 @@ def __process_weather_station(
         sfire_fmc10h_interp = _interp_linear_1d_strict(
             time_sfire[i_start : i_end + 1],
             wrf_dataset["FMC_GC"][i_start : i_end + 1, I_FMC_10h, j_nearest, i_nearest],
-            time_in_period,
+            time_in_period_sfire,
         )
         var = new_wx.create_dataset(
             svn.FUEL_MOISTURE_CONTENT_10H.value,
