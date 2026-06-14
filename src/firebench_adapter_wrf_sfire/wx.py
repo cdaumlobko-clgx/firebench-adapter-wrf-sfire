@@ -81,6 +81,7 @@ def _bracket_indices_inclusive(model_time: np.ndarray, ref_start: float, ref_end
 def _validate_bracket(i_start: int, i_end: int, model_time_len: int):
     """Raise if bracket falls outside model time range (same as existing check)."""
     if i_start < 0 or i_end >= model_time_len:
+        print(i_start, i_end, model_time_len)
         raise ValueError("Reference time outside model time range")
 
 
