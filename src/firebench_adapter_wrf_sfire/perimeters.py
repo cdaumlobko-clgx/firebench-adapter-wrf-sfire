@@ -9,6 +9,13 @@ import geopandas as gpd
 from pathlib import Path
 from os.path import getsize
 
+PERIMETER_EXTRACTION_METHOD_TIGN_G = "tign_g"
+PERIMETER_EXTRACTION_METHOD_BURNED_MASK = "burned_mask"
+PERIMETER_EXTRACTION_METHODS = (
+    PERIMETER_EXTRACTION_METHOD_TIGN_G,
+    PERIMETER_EXTRACTION_METHOD_BURNED_MASK,
+)
+
 
 def _as_utc_datetime(dt: datetime) -> datetime:
     if dt.tzinfo is None:
@@ -79,6 +86,36 @@ def _perimeter_extraction_summary(
     )
 
 
+def _burned_mask_field(t_ign_g: np.ndarray, time_s: float) -> np.ndarray:
+    finite, values = _valid_tign_g_mask_and_values(t_ign_g)
+    return (finite & (values <= time_s)).astype(float)
+
+
+def _extract_perimeter_geopolygons(
+    t_ign_g: np.ndarray,
+    xlon: np.ndarray,
+    xlat: np.ndarray,
+    time_s: float,
+    extraction_method: str,
+    smooth_sigma: float,
+) -> gpd.GeoDataFrame:
+    if extraction_method == PERIMETER_EXTRACTION_METHOD_TIGN_G:
+        return ft.array_to_geopolygons(
+            t_ign_g, xlon, xlat, time_s, smooth_sigma=smooth_sigma
+        )
+
+    if extraction_method == PERIMETER_EXTRACTION_METHOD_BURNED_MASK:
+        burned_field = _burned_mask_field(t_ign_g, time_s)
+        return ft.array_to_geopolygons(
+            burned_field, xlon, xlat, 0.5, smooth_sigma=smooth_sigma
+        )
+
+    raise ValueError(
+        f"Unknown perimeter extraction method {extraction_method!r}. "
+        f"Available methods: {', '.join(PERIMETER_EXTRACTION_METHODS)}"
+    )
+
+
 def get_perimeters_from_t_ign_g(
     new_h5: h5py.File,
     obs_h5: h5py.File,
@@ -88,7 +125,14 @@ def get_perimeters_from_t_ign_g(
     fire_grid_bound: int = 25,
     kml_dir: str = "kml",
     overwrite: bool = False,
+    extraction_method: str = PERIMETER_EXTRACTION_METHOD_TIGN_G,
+    smooth_sigma: float = 0,
 ):
+    if extraction_method not in PERIMETER_EXTRACTION_METHODS:
+        raise ValueError(
+            f"Unknown perimeter extraction method {extraction_method!r}. "
+            f"Available methods: {', '.join(PERIMETER_EXTRACTION_METHODS)}"
+        )
     Path(kml_dir).mkdir(parents=True, exist_ok=True)
     origin_raw = datetime.fromisoformat(t_ign_g_ref_time.replace("Z", "+00:00"))
     origin = _as_utc_datetime(origin_raw)
@@ -121,7 +165,8 @@ def get_perimeters_from_t_ign_g(
         time_s = (obs_datetime - origin).total_seconds()
         print(
             f"Perimeter {perim_path} after {time_s} s "
-            f"(TIGN_G finite range: {min_t_ign_g} to {max_t_ign_g} s)"
+            f"(TIGN_G finite range: {min_t_ign_g} to {max_t_ign_g} s, "
+            f"method={extraction_method}, smooth_sigma={smooth_sigma})"
         )
         sfire_kml_path = Path(
             f"{kml_dir}",
@@ -134,13 +179,16 @@ def get_perimeters_from_t_ign_g(
                     f"Perimeter time {time_s} s for {perim_path} is outside the finite TIGN_G range "
                     f"[{min_t_ign_g}, {max_t_ign_g}] s. Check t_ign_g_ref_time and timezone synchronization."
                 )
-            perim_sfire = ft.array_to_geopolygons(t_ign_g, xlon, xlat, time_s)
+            perim_sfire = _extract_perimeter_geopolygons(
+                t_ign_g, xlon, xlat, time_s, extraction_method, smooth_sigma
+            )
             if perim_sfire.empty:
                 extraction_summary = _perimeter_extraction_summary(
                     t_ign_g, xlon, xlat, time_s
                 )
                 raise ValueError(
                     f"No polygon extracted for {perim_path} at {time_s} s. "
+                    f"method={extraction_method}, smooth_sigma={smooth_sigma}. "
                     f"{extraction_summary}. "
                     "Check t_ign_g_ref_time, timezone synchronization, fire_grid_bound, and TIGN_G units."
                 )
