@@ -26,8 +26,15 @@ def _validate_matching_timezone(*datetimes: datetime):
 
 
 def _valid_tign_g_values(t_ign_g: np.ndarray) -> np.ndarray:
-    values = np.asarray(t_ign_g, dtype=np.float64)
-    return values[np.isfinite(values)]
+    masked_values = np.ma.masked_invalid(t_ign_g)
+    return np.asarray(masked_values.compressed(), dtype=np.float64)
+
+
+def _valid_tign_g_mask_and_values(t_ign_g: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    masked_values = np.ma.masked_invalid(t_ign_g)
+    values = np.asarray(masked_values.filled(np.nan), dtype=np.float64)
+    valid_mask = ~np.ma.getmaskarray(masked_values) & np.isfinite(values)
+    return valid_mask, values
 
 
 def _validate_kml_has_polygons(kml_path: Path):
@@ -37,6 +44,39 @@ def _validate_kml_has_polygons(kml_path: Path):
             f"KML perimeter file contains no polygons: {kml_path}. "
             "Delete it or rerun with overwrite=True to recompute it."
         )
+
+
+def _perimeter_extraction_summary(
+    t_ign_g: np.ndarray,
+    xlon: np.ndarray,
+    xlat: np.ndarray,
+    time_s: float,
+) -> str:
+    finite, values = _valid_tign_g_mask_and_values(t_ign_g)
+    burned = finite & (values <= time_s)
+    finite_count = int(np.sum(finite))
+    burned_count = int(np.sum(burned))
+    boundary_count = 0
+    if burned_count:
+        boundary = np.zeros_like(burned, dtype=bool)
+        boundary[0, :] = True
+        boundary[-1, :] = True
+        boundary[:, 0] = True
+        boundary[:, -1] = True
+        boundary_count = int(np.sum(burned & boundary))
+
+    finite_values = values[finite]
+    percentiles = (
+        np.percentile(finite_values, [1, 5, 50, 95, 99]) if finite_count else []
+    )
+    percentile_text = ", ".join(f"{value:.1f}" for value in percentiles)
+    return (
+        f"finite_cells={finite_count}, cells_le_iso={burned_count}, "
+        f"boundary_cells_le_iso={boundary_count}, "
+        f"TIGN_G_percentiles_1_5_50_95_99=[{percentile_text}], "
+        f"lon_range=[{float(np.nanmin(xlon))}, {float(np.nanmax(xlon))}], "
+        f"lat_range=[{float(np.nanmin(xlat))}, {float(np.nanmax(xlat))}]"
+    )
 
 
 def get_perimeters_from_t_ign_g(
@@ -96,8 +136,12 @@ def get_perimeters_from_t_ign_g(
                 )
             perim_sfire = ft.array_to_geopolygons(t_ign_g, xlon, xlat, time_s)
             if perim_sfire.empty:
+                extraction_summary = _perimeter_extraction_summary(
+                    t_ign_g, xlon, xlat, time_s
+                )
                 raise ValueError(
                     f"No polygon extracted for {perim_path} at {time_s} s. "
+                    f"{extraction_summary}. "
                     "Check t_ign_g_ref_time, timezone synchronization, fire_grid_bound, and TIGN_G units."
                 )
             perim_sfire.to_file(
