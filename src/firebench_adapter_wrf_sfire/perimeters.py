@@ -44,6 +44,12 @@ def _valid_tign_g_mask_and_values(t_ign_g: np.ndarray) -> tuple[np.ndarray, np.n
     return valid_mask, values
 
 
+def _fire_grid_slice(fire_grid_bound: int) -> slice:
+    if fire_grid_bound < 0:
+        raise ValueError("fire_grid_bound must be >= 0")
+    return slice(fire_grid_bound, -fire_grid_bound) if fire_grid_bound else slice(None)
+
+
 def _validate_kml_has_polygons(kml_path: Path):
     perimeters = gpd.read_file(kml_path, driver="KML")
     if perimeters.empty:
@@ -91,6 +97,39 @@ def _burned_mask_field(t_ign_g: np.ndarray, time_s: float) -> np.ndarray:
     return (finite & (values <= time_s)).astype(float)
 
 
+def _array_to_geopolygons(
+    values: np.ndarray,
+    xlon: np.ndarray,
+    xlat: np.ndarray,
+    contour_level: float,
+    smooth_sigma: float,
+) -> gpd.GeoDataFrame:
+    return ft.array_to_geopolygons(
+        values, xlon, xlat, contour_level, smooth_sigma=smooth_sigma
+    )
+
+
+def _extract_burned_mask_geopolygons(
+    t_ign_g: np.ndarray,
+    xlon: np.ndarray,
+    xlat: np.ndarray,
+    time_s: float,
+    smooth_sigma: float,
+) -> gpd.GeoDataFrame:
+    burned_field = _burned_mask_field(t_ign_g, time_s)
+    perimeters = _array_to_geopolygons(
+        burned_field, xlon, xlat, 0.5, smooth_sigma=smooth_sigma
+    )
+    if not perimeters.empty or not smooth_sigma:
+        return perimeters
+
+    print(
+        "No smoothed burned-mask contour polygon found; retrying burned-mask "
+        "contour extraction without smoothing."
+    )
+    return _array_to_geopolygons(burned_field, xlon, xlat, 0.5, smooth_sigma=0)
+
+
 def _extract_perimeter_geopolygons(
     t_ign_g: np.ndarray,
     xlon: np.ndarray,
@@ -100,14 +139,23 @@ def _extract_perimeter_geopolygons(
     smooth_sigma: float,
 ) -> gpd.GeoDataFrame:
     if extraction_method == PERIMETER_EXTRACTION_METHOD_TIGN_G:
-        return ft.array_to_geopolygons(
+        perimeters = _array_to_geopolygons(
             t_ign_g, xlon, xlat, time_s, smooth_sigma=smooth_sigma
+        )
+        if not perimeters.empty:
+            return perimeters
+
+        print(
+            "No raw TIGN_G contour polygon found; falling back to burned-mask "
+            "contour extraction."
+        )
+        return _extract_burned_mask_geopolygons(
+            t_ign_g, xlon, xlat, time_s, smooth_sigma
         )
 
     if extraction_method == PERIMETER_EXTRACTION_METHOD_BURNED_MASK:
-        burned_field = _burned_mask_field(t_ign_g, time_s)
-        return ft.array_to_geopolygons(
-            burned_field, xlon, xlat, 0.5, smooth_sigma=smooth_sigma
+        return _extract_burned_mask_geopolygons(
+            t_ign_g, xlon, xlat, time_s, smooth_sigma
         )
 
     raise ValueError(
@@ -122,7 +170,7 @@ def get_perimeters_from_t_ign_g(
     wrf_dataset: Dataset,
     list_perimeter_paths: list[str],
     t_ign_g_ref_time: str,
-    fire_grid_bound: int = 25,
+    fire_grid_bound: int = 10,
     kml_dir: str = "kml",
     overwrite: bool = False,
     extraction_method: str = PERIMETER_EXTRACTION_METHOD_TIGN_G,
@@ -136,20 +184,11 @@ def get_perimeters_from_t_ign_g(
     Path(kml_dir).mkdir(parents=True, exist_ok=True)
     origin_raw = datetime.fromisoformat(t_ign_g_ref_time.replace("Z", "+00:00"))
     origin = _as_utc_datetime(origin_raw)
+    grid_slice = _fire_grid_slice(fire_grid_bound)
 
-    xlat = np.array(
-        wrf_dataset["FXLAT"][
-            0, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound
-        ]
-    )
-    xlon = np.array(
-        wrf_dataset["FXLONG"][
-            0, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound
-        ]
-    )
-    t_ign_g = wrf_dataset["TIGN_G"][
-        -1, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound
-    ]
+    xlat = np.array(wrf_dataset["FXLAT"][0, grid_slice, grid_slice])
+    xlon = np.array(wrf_dataset["FXLONG"][0, grid_slice, grid_slice])
+    t_ign_g = wrf_dataset["TIGN_G"][-1, grid_slice, grid_slice]
     valid_t_ign_g = _valid_tign_g_values(t_ign_g)
     if valid_t_ign_g.size == 0:
         raise ValueError("TIGN_G contains no finite values in the selected fire grid.")
