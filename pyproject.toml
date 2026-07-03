@@ -13,6 +13,7 @@ maintainers = [
 ]
 description = "firebench-adapter-wrf-sfire provides a FireBench adapter for the WRF-SFIRE model"
 dependencies = [
+    "contourpy < 2.0",
     "firebench",
     "geopandas < 2.0",
     "h5py < 4.0",

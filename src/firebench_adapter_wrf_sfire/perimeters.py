@@ -1,3 +1,4 @@
+import contourpy
 import numpy as np
 import hdf5plugin
 import h5py
@@ -8,6 +9,8 @@ from datetime import datetime, timezone
 import geopandas as gpd
 from pathlib import Path
 from os.path import getsize
+from scipy.ndimage import gaussian_filter
+from shapely.geometry import Polygon
 
 PERIMETER_EXTRACTION_METHOD_TIGN_G = "tign_g"
 PERIMETER_EXTRACTION_METHOD_BURNED_MASK = "burned_mask"
@@ -97,15 +100,66 @@ def _burned_mask_field(t_ign_g: np.ndarray, time_s: float) -> np.ndarray:
     return (finite & (values <= time_s)).astype(float)
 
 
-def _array_to_geopolygons(
-    values: np.ndarray,
+def _line_contour_to_geopolygons(
+    field: np.ndarray,
     xlon: np.ndarray,
     xlat: np.ndarray,
-    contour_level: float,
-    smooth_sigma: float,
+    iso_value: float,
+    smooth_sigma: float = 0,
+    original_crs: str | dict = "EPSG:4326",
 ) -> gpd.GeoDataFrame:
-    return ft.array_to_geopolygons(
-        values, xlon, xlat, contour_level, smooth_sigma=smooth_sigma
+    if not xlon.shape == xlat.shape == field.shape:
+        raise ValueError("Input arrays (lon, lat, field) must have the same shape.")
+
+    field = np.ma.masked_invalid(field)
+    if smooth_sigma > 0:
+        field = gaussian_filter(field.filled(np.nan), sigma=smooth_sigma)
+        field = np.ma.masked_invalid(field)
+
+    contour_generator = contourpy.contour_generator(
+        x=xlon,
+        y=xlat,
+        z=field,
+        line_type=contourpy.LineType.Separate,
+        corner_mask=True,
+    )
+    rings = [ring for ring in contour_generator.lines(iso_value) if len(ring) >= 4]
+
+    polygons = []
+    polygon_rings = []
+    for ring in rings:
+        polygon = Polygon(ring)
+        if polygon.is_valid and polygon.area > 0:
+            polygons.append(polygon)
+            polygon_rings.append(ring)
+
+    sorted_indices = sorted(
+        range(len(polygons)), key=lambda index: polygons[index].area, reverse=True
+    )
+    used_as_hole = set()
+    final_polygons = []
+
+    for index in sorted_indices:
+        if index in used_as_hole:
+            continue
+        outer = polygons[index]
+        holes = []
+        for inner_index in sorted_indices:
+            if index == inner_index or inner_index in used_as_hole:
+                continue
+            inner = polygons[inner_index]
+            if inner.within(outer):
+                if any(inner.within(Polygon(hole)) for hole in holes):
+                    continue
+                holes.append(polygon_rings[inner_index])
+                used_as_hole.add(inner_index)
+
+        final_polygon = Polygon(polygon_rings[index], holes=holes)
+        if final_polygon.is_valid and final_polygon.area > 0:
+            final_polygons.append(final_polygon)
+
+    return gpd.GeoDataFrame(geometry=final_polygons, crs=original_crs).assign(
+        iso_value=iso_value
     )
 
 
@@ -117,7 +171,7 @@ def _extract_burned_mask_geopolygons(
     smooth_sigma: float,
 ) -> gpd.GeoDataFrame:
     burned_field = _burned_mask_field(t_ign_g, time_s)
-    perimeters = _array_to_geopolygons(
+    perimeters = _line_contour_to_geopolygons(
         burned_field, xlon, xlat, 0.5, smooth_sigma=smooth_sigma
     )
     if not perimeters.empty or not smooth_sigma:
@@ -127,7 +181,7 @@ def _extract_burned_mask_geopolygons(
         "No smoothed burned-mask contour polygon found; retrying burned-mask "
         "contour extraction without smoothing."
     )
-    return _array_to_geopolygons(burned_field, xlon, xlat, 0.5, smooth_sigma=0)
+    return _line_contour_to_geopolygons(burned_field, xlon, xlat, 0.5, smooth_sigma=0)
 
 
 def _extract_perimeter_geopolygons(
@@ -139,7 +193,7 @@ def _extract_perimeter_geopolygons(
     smooth_sigma: float,
 ) -> gpd.GeoDataFrame:
     if extraction_method == PERIMETER_EXTRACTION_METHOD_TIGN_G:
-        perimeters = _array_to_geopolygons(
+        perimeters = _line_contour_to_geopolygons(
             t_ign_g, xlon, xlat, time_s, smooth_sigma=smooth_sigma
         )
         if not perimeters.empty:
@@ -170,7 +224,7 @@ def get_perimeters_from_t_ign_g(
     wrf_dataset: Dataset,
     list_perimeter_paths: list[str],
     t_ign_g_ref_time: str,
-    fire_grid_bound: int = 10,
+    fire_grid_bound: int = 25,
     kml_dir: str = "kml",
     overwrite: bool = False,
     extraction_method: str = PERIMETER_EXTRACTION_METHOD_TIGN_G,
