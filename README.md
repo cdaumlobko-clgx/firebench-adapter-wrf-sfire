@@ -46,6 +46,14 @@ The adapter exposes functions for converting WRF-SFIRE output into FireBench-sta
 - `get_perimeters_from_t_ign_g`
 - `get_weather_stations`
 
+The package also provides a YAML-driven CLI:
+```bash
+fb-sfire run config.yml
+```
+
+The config contains a `main` section for shared paths and times, plus dedicated sections such as
+`severity`, `building_damage`, `ravg_cc`, `perimeters`, and `weather`.
+
 See the tutorial in the documentation for a complete WRF-SFIRE to FireBench workflow:
 
 https://firebench-adapter-wrf-sfire.readthedocs.io/en/latest/tutorials/caldor_wrf_sfire.html

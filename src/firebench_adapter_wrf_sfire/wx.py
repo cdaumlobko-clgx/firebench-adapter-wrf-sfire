@@ -9,6 +9,8 @@ from bisect import bisect_left, bisect_right
 from firebench.adapter_common.interpolation import find_nearest_grid_point
 from scipy.interpolate import interp1d
 
+from ._grid import fire_grid_slice
+
 GRAVITY = 9.81
 
 
@@ -313,22 +315,15 @@ def __process_weather_station(
     _write_time_dataset_seconds(new_wx, time_in_period, time_origin, compression_lvl)
 
     # get SFIRE data
-    xlat = np.array(
-        wrf_dataset["XLAT"][0, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound]
-    )
-    xlon = np.array(
-        wrf_dataset["XLONG"][0, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound]
-    )
+    grid_slice = fire_grid_slice(fire_grid_bound)
+    xlat = np.array(wrf_dataset["XLAT"][0, grid_slice, grid_slice])
+    xlon = np.array(wrf_dataset["XLONG"][0, grid_slice, grid_slice])
     Ny, Nx = xlat.shape
     min_dlat = np.min(np.diff(xlat, axis=0))
     min_dlon = np.min(np.diff(xlon, axis=1))
 
-    fxlat = np.array(
-        wrf_dataset["FXLAT"][0, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound]
-    )
-    fxlon = np.array(
-        wrf_dataset["FXLONG"][0, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound]
-    )
+    fxlat = np.array(wrf_dataset["FXLAT"][0, grid_slice, grid_slice])
+    fxlon = np.array(wrf_dataset["FXLONG"][0, grid_slice, grid_slice])
     Nyf, Nxf = fxlat.shape
     min_dlatf = np.min(np.diff(fxlat, axis=0))
     min_dlonf = np.min(np.diff(fxlon, axis=1))

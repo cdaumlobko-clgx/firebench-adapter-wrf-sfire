@@ -5,6 +5,8 @@ import h5py
 from netCDF4 import Dataset
 from firebench.adapter_common.interpolation import nearest_2d
 
+from ._grid import fire_grid_slice
+
 # Threshold for burn severity
 # <= SEVERITY_TH[0]: high (4)
 # <= SEVERITY_TH[1]: moderate (3)
@@ -60,12 +62,9 @@ def get_mtbs_severity_surf(
         var.attrs["_FillValue"] = 0
 
     # get SFIRE data
-    xlat = np.array(
-        wrf_dataset["FXLAT"][0, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound]
-    )
-    xlon = np.array(
-        wrf_dataset["FXLONG"][0, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound]
-    )
+    grid_slice = fire_grid_slice(fire_grid_bound)
+    xlat = np.array(wrf_dataset["FXLAT"][0, grid_slice, grid_slice])
+    xlon = np.array(wrf_dataset["FXLONG"][0, grid_slice, grid_slice])
 
     Ny, Nx = xlat.shape
     # get data from std file
@@ -74,9 +73,7 @@ def get_mtbs_severity_surf(
     mtbs_crs = obs_h5[f"{mtbs_group_path}"].attrs["crs"]
 
     if method == "fuel_frac":
-        fuel_frac = wrf_dataset["FUEL_FRAC"][
-            -1, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound
-        ]
+        fuel_frac = np.array(wrf_dataset["FUEL_FRAC"][-1, grid_slice, grid_slice])
         SFIRE_severity = __compute_severity_from_fuel_frac(Nx, Ny, fuel_frac, severity_thresholds)
         severity_interp = nearest_2d(SFIRE_severity, xlon, xlat, mtbs_lon, mtbs_lat)
         __write_group_new_file(severity_interp)

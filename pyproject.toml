@@ -14,6 +14,7 @@ maintainers = [
 description = "firebench-adapter-wrf-sfire provides a FireBench adapter for the WRF-SFIRE model"
 requires-python = ">=3.10"
 dependencies = [
+    "click >= 8.1",
     "contourpy < 2.0",
     "firebench",
     "geopandas < 2.0",
@@ -22,6 +23,7 @@ dependencies = [
     "netCDF4 < 2.0",
     "numba < 1.0",
     "numpy < 3.0",
+    "PyYAML >= 6.0",
     "scipy < 2.0",
 ]
 readme = "README.md"
@@ -40,6 +42,9 @@ Documentation = "https://firebench-adapter-wrf-sfire.readthedocs.io/en/latest/"
 Repository = "https://github.com/wirc-sjsu/firebench-adapter-wrf-sfire"
 Issues = "https://github.com/wirc-sjsu/firebench-adapter-wrf-sfire/issues"
 Discussions = "https://github.com/wirc-sjsu/firebench/discussions"
+
+[project.scripts]
+fb-sfire = "firebench_adapter_wrf_sfire.cli:main"
 
 [project.optional-dependencies]
 dev = [
@@ -62,6 +67,8 @@ features = ["dev"]
 allow-direct-references = true
 [tool.hatch.build.targets.wheel]
 packages = ["src/firebench_adapter_wrf_sfire"]
+[tool.pytest.ini_options]
+pythonpath = ["src"]
 [tool.black]
 line-length = 108
 target-version = ["py310"]

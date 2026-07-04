@@ -4,6 +4,8 @@ import h5py
 from netCDF4 import Dataset
 from firebench.adapter_common.interpolation import find_nearest_grid_point
 
+from ._grid import fire_grid_slice
+
 
 def get_building_damage(
     new_h5: h5py.File,
@@ -33,12 +35,9 @@ def get_building_damage(
         var.attrs["units"] = "dimensionless"
 
     # get SFIRE data
-    xlat = np.array(
-        wrf_dataset["FXLAT"][0, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound]
-    )
-    xlon = np.array(
-        wrf_dataset["FXLONG"][0, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound]
-    )
+    grid_slice = fire_grid_slice(fire_grid_bound)
+    xlat = np.array(wrf_dataset["FXLAT"][0, grid_slice, grid_slice])
+    xlon = np.array(wrf_dataset["FXLONG"][0, grid_slice, grid_slice])
     Ny, Nx = xlat.shape
     min_dlat = np.min(np.diff(xlat, axis=0))
     min_dlon = np.min(np.diff(xlon, axis=1))
@@ -49,9 +48,7 @@ def get_building_damage(
     N_buildings = len(building_lat)
 
     if method == "fire_area":
-        fire_area = wrf_dataset["FIRE_AREA"][
-            -1, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound
-        ]
+        fire_area = np.array(wrf_dataset["FIRE_AREA"][-1, grid_slice, grid_slice])
         sfire_building_damaged = []
         for k in range(N_buildings):
             print(f"{k+1}/{N_buildings}")

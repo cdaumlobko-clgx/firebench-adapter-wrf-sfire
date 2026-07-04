@@ -5,6 +5,8 @@ import h5py
 from netCDF4 import Dataset
 from firebench.adapter_common.interpolation import nearest_2d
 
+from ._grid import fire_grid_slice
+
 
 @njit(fastmath=True)
 def __compute_canopy_cover_loss_from_cfb(Nx, Ny, fire_area, cfb):
@@ -54,12 +56,9 @@ def get_ravg_cc(
         var.attrs["_FillValue"] = 0
 
     # get SFIRE data
-    xlat = np.array(
-        wrf_dataset["FXLAT"][0, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound]
-    )
-    xlon = np.array(
-        wrf_dataset["FXLONG"][0, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound]
-    )
+    grid_slice = fire_grid_slice(fire_grid_bound)
+    xlat = np.array(wrf_dataset["FXLAT"][0, grid_slice, grid_slice])
+    xlon = np.array(wrf_dataset["FXLONG"][0, grid_slice, grid_slice])
 
     Ny, Nx = xlat.shape
     # get data from std file
@@ -68,11 +67,9 @@ def get_ravg_cc(
     obs_crs = obs_h5[f"{ravg_group_path}"].attrs["crs"]
 
     if method == "cfb":
-        fire_area = wrf_dataset["FIRE_AREA"][
-            -1, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound
-        ]
+        fire_area = np.array(wrf_dataset["FIRE_AREA"][-1, grid_slice, grid_slice])
         try:
-            cfb = wrf_dataset["CFB"][-1, fire_grid_bound:-fire_grid_bound, fire_grid_bound:-fire_grid_bound]
+            cfb = np.array(wrf_dataset["CFB"][-1, grid_slice, grid_slice])
         except:
             print("WARNING: CFB not found in wrfout file. Replaced by zeros.")
             cfb = np.zeros_like(fire_area)

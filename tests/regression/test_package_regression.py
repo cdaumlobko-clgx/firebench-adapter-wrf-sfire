@@ -60,9 +60,11 @@ def test_mtbs_severity_synthetic_regression(tmp_path):
         group.create_dataset("position_lat", data=np.array([[38.0, 38.0], [39.0, 39.0]]))
         group.create_dataset("position_lon", data=np.array([[-121.0, -120.0], [-121.0, -120.0]]))
 
-    with h5py.File(out_path, "w") as new_h5, h5py.File(obs_path, "r") as obs_h5, Dataset(
-        wrf_path, "r"
-    ) as wrf:
+    with (
+        h5py.File(out_path, "w") as new_h5,
+        h5py.File(obs_path, "r") as obs_h5,
+        Dataset(wrf_path, "r") as wrf,
+    ):
         get_mtbs_severity_surf(
             new_h5,
             obs_h5,

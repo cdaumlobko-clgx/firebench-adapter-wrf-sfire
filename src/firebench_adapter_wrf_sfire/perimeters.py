@@ -82,9 +82,7 @@ def _perimeter_extraction_summary(
         boundary_count = int(np.sum(burned & boundary))
 
     finite_values = values[finite]
-    percentiles = (
-        np.percentile(finite_values, [1, 5, 50, 95, 99]) if finite_count else []
-    )
+    percentiles = np.percentile(finite_values, [1, 5, 50, 95, 99]) if finite_count else []
     percentile_text = ", ".join(f"{value:.1f}" for value in percentiles)
     return (
         f"finite_cells={finite_count}, cells_le_iso={burned_count}, "
@@ -133,9 +131,7 @@ def _line_contour_to_geopolygons(
             polygons.append(polygon)
             polygon_rings.append(ring)
 
-    sorted_indices = sorted(
-        range(len(polygons)), key=lambda index: polygons[index].area, reverse=True
-    )
+    sorted_indices = sorted(range(len(polygons)), key=lambda index: polygons[index].area, reverse=True)
     used_as_hole = set()
     final_polygons = []
 
@@ -158,9 +154,7 @@ def _line_contour_to_geopolygons(
         if final_polygon.is_valid and final_polygon.area > 0:
             final_polygons.append(final_polygon)
 
-    return gpd.GeoDataFrame(geometry=final_polygons, crs=original_crs).assign(
-        iso_value=iso_value
-    )
+    return gpd.GeoDataFrame(geometry=final_polygons, crs=original_crs).assign(iso_value=iso_value)
 
 
 def _extract_burned_mask_geopolygons(
@@ -171,9 +165,7 @@ def _extract_burned_mask_geopolygons(
     smooth_sigma: float,
 ) -> gpd.GeoDataFrame:
     burned_field = _burned_mask_field(t_ign_g, time_s)
-    perimeters = _line_contour_to_geopolygons(
-        burned_field, xlon, xlat, 0.5, smooth_sigma=smooth_sigma
-    )
+    perimeters = _line_contour_to_geopolygons(burned_field, xlon, xlat, 0.5, smooth_sigma=smooth_sigma)
     if not perimeters.empty or not smooth_sigma:
         return perimeters
 
@@ -193,24 +185,15 @@ def _extract_perimeter_geopolygons(
     smooth_sigma: float,
 ) -> gpd.GeoDataFrame:
     if extraction_method == PERIMETER_EXTRACTION_METHOD_TIGN_G:
-        perimeters = _line_contour_to_geopolygons(
-            t_ign_g, xlon, xlat, time_s, smooth_sigma=smooth_sigma
-        )
+        perimeters = _line_contour_to_geopolygons(t_ign_g, xlon, xlat, time_s, smooth_sigma=smooth_sigma)
         if not perimeters.empty:
             return perimeters
 
-        print(
-            "No raw TIGN_G contour polygon found; falling back to burned-mask "
-            "contour extraction."
-        )
-        return _extract_burned_mask_geopolygons(
-            t_ign_g, xlon, xlat, time_s, smooth_sigma
-        )
+        print("No raw TIGN_G contour polygon found; falling back to burned-mask " "contour extraction.")
+        return _extract_burned_mask_geopolygons(t_ign_g, xlon, xlat, time_s, smooth_sigma)
 
     if extraction_method == PERIMETER_EXTRACTION_METHOD_BURNED_MASK:
-        return _extract_burned_mask_geopolygons(
-            t_ign_g, xlon, xlat, time_s, smooth_sigma
-        )
+        return _extract_burned_mask_geopolygons(t_ign_g, xlon, xlat, time_s, smooth_sigma)
 
     raise ValueError(
         f"Unknown perimeter extraction method {extraction_method!r}. "
@@ -250,9 +233,7 @@ def get_perimeters_from_t_ign_g(
     max_t_ign_g = float(np.max(valid_t_ign_g))
 
     for perim_path in list_perimeter_paths:
-        obs_datetime_raw = datetime.fromisoformat(
-            obs_h5[perim_path].attrs["time"].replace("Z", "+00:00")
-        )
+        obs_datetime_raw = datetime.fromisoformat(obs_h5[perim_path].attrs["time"].replace("Z", "+00:00"))
         obs_datetime = _as_utc_datetime(obs_datetime_raw)
         _validate_matching_timezone(origin_raw, obs_datetime_raw)
         time_s = (obs_datetime - origin).total_seconds()
@@ -276,18 +257,14 @@ def get_perimeters_from_t_ign_g(
                 t_ign_g, xlon, xlat, time_s, extraction_method, smooth_sigma
             )
             if perim_sfire.empty:
-                extraction_summary = _perimeter_extraction_summary(
-                    t_ign_g, xlon, xlat, time_s
-                )
+                extraction_summary = _perimeter_extraction_summary(t_ign_g, xlon, xlat, time_s)
                 raise ValueError(
                     f"No polygon extracted for {perim_path} at {time_s} s. "
                     f"method={extraction_method}, smooth_sigma={smooth_sigma}. "
                     f"{extraction_summary}. "
                     "Check t_ign_g_ref_time, timezone synchronization, fire_grid_bound, and TIGN_G units."
                 )
-            perim_sfire.to_file(
-                sfire_kml_filename, driver="KML", layer="fire_perimeter"
-            )
+            perim_sfire.to_file(sfire_kml_filename, driver="KML", layer="fire_perimeter")
         else:
             print(
                 "KML file already found in directory and reused. Use overwrite = True to recompute perimeter."
