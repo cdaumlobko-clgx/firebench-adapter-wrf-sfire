@@ -36,7 +36,7 @@ main:
   obs_path: /path/to/firebench-data/Caldor.h5
   wrf_path: /path/to/wrf-sfire/wrfout
   output_path: outputs/SFIRE_Caldor.h5
-  authors: "Aurelien Costes, SJSU; Collaborator Name, Institution;"
+  authors: "Collaborator Name, Institution;"
   overwrite: true
   compression_lvl: 20
   fire_grid_bound: 25
