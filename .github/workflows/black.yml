@@ -1,0 +1,28 @@
+name: Code Formatting
+
+on:
+  push:
+    branches: [main, release]
+  pull_request:
+    branches: [main]
+
+jobs:
+  black:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Black
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "black==25.1.0"
+
+      - name: Run Black check
+        run: python -m black --check src/firebench_adapter_wrf_sfire tests .github/actions

@@ -1,40 +1,55 @@
 # Declare these targets as phony to avoid conflicts with files of the same name
-.PHONY: test test-cov lint update-lint-score code-formatting bandit update-docs-changelog check-consistency-namespace generate-api-doc docs clean
+.PHONY: test test-cov lint update-lint-score code-formatting fix-code-formatting bandit update-docs-changelog docs clean clean-build install-build-tools build check-dist upload-test upload
 
-# Run all tests without coverage report
+PYTHON ?= python
+
 test:
-	pytest tests
+	$(PYTHON) -m pytest tests
 
-# Run all tests with coverage report
 test-cov:
-	pytest --cov-report term-missing --cov=src/firebench_adapter_wrf_sfire
+	$(PYTHON) -m pytest --cov-report term-missing --cov=src/firebench_adapter_wrf_sfire tests
 
-# Run pylint analysis
 lint:
-	pylint src/firebench_adapter_wrf_sfire --rcfile=.pylintrc
+	$(PYTHON) -m pylint src/firebench_adapter_wrf_sfire --rcfile=.pylintrc
 
-# Update pylint score in README.md
 update-lint-score:
-	python .github/actions/run_pylint.py
+	$(PYTHON) .github/actions/run_pylint.py
 
-# Run black code formatting
 code-formatting:
-	black --line-length 108 src/firebench_adapter_wrf_sfire
-# 	black --line-length 108 tests
-	black --line-length 108 .github/actions
+	$(PYTHON) -m black --check src/firebench_adapter_wrf_sfire tests .github/actions
 
-# Run bandit analysis
+fix-code-formatting:
+	$(PYTHON) -m black src/firebench_adapter_wrf_sfire tests .github/actions
+
 bandit:
-	bandit -r src/firebench_adapter_wrf_sfire --severity-level high --confidence-level high
+	$(PYTHON) -m bandit -r src/firebench_adapter_wrf_sfire --severity-level high --confidence-level high
 
-# Update documentation
 update-docs-changelog:
-	python .github/actions/update_changelog_in_docs.py
+	$(PYTHON) .github/actions/update_changelog_in_docs.py
 
-# generate local documentation
 docs:
-	sphinx-build -b html docs docs/_build/html
+	$(PYTHON) -m sphinx -b html docs docs/_build/html
 
-# generate local documentation
+clean-build:
+	rm -rf build
+	rm -rf dist
+	rm -rf *.egg-info
+	find . -type d -name "*.egg-info" -prune -exec rm -rf {} +
+
+install-build-tools:
+	$(PYTHON) -m pip install --upgrade build twine
+
+build: clean-build
+	$(PYTHON) -m build
+
+check-dist: build
+	$(PYTHON) -m twine check dist/*
+
+upload-test: check-dist
+	$(PYTHON) -m twine upload --repository testpypi dist/*
+
+upload: check-dist
+	$(PYTHON) -m twine upload dist/*
+
 clean:
 	rm -rf docs/_build

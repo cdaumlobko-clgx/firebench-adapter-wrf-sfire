@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "firebench-adapter-wrf-sfire"
-version = "0.1.0a"
+version = "0.1"
 authors = [
     {name = "Aurélien Costes", email = "aurelien.costes31@gmail.com"},
 ]
@@ -12,6 +12,7 @@ maintainers = [
     {name = "Aurélien Costes", email = "aurelien.costes31@gmail.com"},
 ]
 description = "firebench-adapter-wrf-sfire provides a FireBench adapter for the WRF-SFIRE model"
+requires-python = ">=3.10"
 dependencies = [
     "contourpy < 2.0",
     "firebench",
@@ -26,29 +27,34 @@ dependencies = [
 readme = "README.md"
 license = {file = "LICENSE"}
 classifiers = [
-    # How mature is this project? Common values are
-    #   3 - Alpha
-    #   4 - Beta
-    #   5 - Production/Stable
     "Development Status :: 3 - Alpha",
-
-    # Specify the Python versions you support here.
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-
-    # Pick your license as you wish (see also "license" above)
     "License :: OSI Approved :: Apache Software License",
 ]
+[project.urls]
+Homepage = "https://github.com/wirc-sjsu/firebench-adapter-wrf-sfire"
+Documentation = "https://firebench-adapter-wrf-sfire.readthedocs.io/en/latest/"
+Repository = "https://github.com/wirc-sjsu/firebench-adapter-wrf-sfire"
+Issues = "https://github.com/wirc-sjsu/firebench-adapter-wrf-sfire/issues"
+Discussions = "https://github.com/wirc-sjsu/firebench/discussions"
+
 [project.optional-dependencies]
 dev = [
     "bandit",
     "black",
+    "build",
+    "myst-parser",
     "pylint",
     "pytest",
     "pytest-cov",
     "pytest-mock",
+    "shapely",
+    "sphinx",
+    "sphinx-rtd-theme",
+    "twine",
 ]
 [tool.hatch.envs.default]
 features = ["dev"]
@@ -56,3 +62,6 @@ features = ["dev"]
 allow-direct-references = true
 [tool.hatch.build.targets.wheel]
 packages = ["src/firebench_adapter_wrf_sfire"]
+[tool.black]
+line-length = 108
+target-version = ["py310"]

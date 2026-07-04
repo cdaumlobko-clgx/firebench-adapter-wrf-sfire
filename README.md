@@ -1,12 +1,12 @@
 # firebench-adapter-wrf-sfire
 
-This package provides a FireBench adapter for the WRF-SFIRE model.
+This package provides a [FireBench](https://firebench.readthedocs.io/en/latest/) adapter for the WRF-SFIRE model.
 
 It enables the transformation of native WRF-SFIRE outputs (netCDF) into **FireBench-standardized datasets** compatible with FireBench benchmark cases.
 
 ## Purpose
 
-FireBench benchmarks require model outputs to follow a strict standard (See [FireBench documentation](https://firebench.readthedocs.io/en/latest/standard_format.html))
+FireBench benchmarks require model outputs to follow a strict standard. See the [FireBench standard format documentation](https://firebench.readthedocs.io/en/latest/standard_format.html).
 
 This adapter:
 - reads native WRF-SFIRE outputs,
@@ -26,12 +26,37 @@ This separation is intentional and ensures fair benchmarking.
 
 ## Installation
 
-For users, in the package directory:
+For users:
 ```bash
-pip install .
+pip install firebench-adapter-wrf-sfire
 ```
 
-For developers, in the package directory:
+For local development:
 ```bash
 pip install -e ".[dev]"
 ```
+
+## Usage
+
+The adapter exposes functions for converting WRF-SFIRE output into FireBench-standardized groups:
+
+- `get_mtbs_severity_surf`
+- `get_building_damage`
+- `get_ravg_cc`
+- `get_perimeters_from_t_ign_g`
+- `get_weather_stations`
+
+See the tutorial in the documentation for a complete WRF-SFIRE to FireBench workflow:
+
+https://firebench-adapter-wrf-sfire.readthedocs.io/en/latest/tutorials/caldor_wrf_sfire.html
+
+## Development
+
+Run tests and checks with:
+```bash
+make test
+make code-formatting
+make check-dist
+```
+
+This project is licensed under the Apache License 2.0.
