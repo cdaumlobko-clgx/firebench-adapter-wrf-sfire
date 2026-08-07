@@ -63,8 +63,8 @@ ravg_cc:
 perimeters:
   enabled: true
   paths:
-    - /geopolygons/Caldor_2021-08-20T20:20-07:00
-    - /geopolygons/Caldor_2021-08-21T21:15-07:00
+    - /polygons/Caldor_2021-08-20T20:20-07:00
+    - /polygons/Caldor_2021-08-21T21:15-07:00
   kml_dir: outputs/Cawfe_kml
   extraction_method: tign_g
   smooth_sigma: 10
