@@ -8,7 +8,7 @@ import firebench.tools as ft
 from datetime import datetime, timezone
 import geopandas as gpd
 from pathlib import Path
-from os.path import getsize
+from os.path import getsize, relpath
 from scipy.ndimage import gaussian_filter
 from shapely.geometry import Polygon
 
@@ -273,6 +273,7 @@ def get_perimeters_from_t_ign_g(
 
         grp = new_h5.create_group(perim_path)
         grp.attrs["time"] = fs.datetime_to_iso8601(obs_datetime_raw)
-        grp.attrs["rel_path"] = sfire_kml_path.as_posix()
+        h5_parent = Path(new_h5.filename).resolve().parent
+        grp.attrs["rel_path"] = Path(relpath(sfire_kml_filename, start=h5_parent)).as_posix()
         grp.attrs["sha256"] = ft.calculate_sha256(sfire_kml_filename)
         grp.attrs["file_size_bytes"] = getsize(sfire_kml_filename)
