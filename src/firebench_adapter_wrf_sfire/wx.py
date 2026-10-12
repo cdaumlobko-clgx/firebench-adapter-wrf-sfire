@@ -288,7 +288,6 @@ def __process_weather_station(
         "position_lat_units",
         "position_lon_units",
     ]
-    I_FMC_10h = 1
     time_in_period, time_origin = _time_in_period_seconds(
         obs_h5, station_path, period_start_dt, period_end_dt
     )
@@ -531,7 +530,7 @@ def __process_weather_station(
         )
         sfire_fmc10h_interp = _interp_linear_1d_strict(
             time_sfire[i_start : i_end + 1],
-            wrf_dataset["FMC_GC"][i_start : i_end + 1, I_FMC_10h, j_nearest, i_nearest],
+            wrf_dataset["FMC_GC"][i_start : i_end + 1, j_nearest, i_nearest],
             time_in_period_sfire,
         )
         var = new_wx.create_dataset(
