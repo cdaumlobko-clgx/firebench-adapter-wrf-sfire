@@ -127,6 +127,20 @@ finally:
 
 ## Notes
 
+For weather-station processing, `get_weather_stations` defaults to `i_fmc_10h=1`, the zero-based fuel-layer index for 10-hour fuel moisture in a 4D `FMC_GC` field `(time, fuel layer, y, x)`. Pass another integer to select a different layer. If postprocessing adds `FMC_GC` as a 3D field `(time, y, x)` containing only 10-hour fuel moisture, pass `i_fmc_10h=None`:
+
+```python
+get_weather_stations(
+    new_h5,
+    obs_h5,
+    wrf_dataset,
+    sfire_ref_time,
+    start_dt,
+    end_dt,
+    i_fmc_10h=None,
+)
+```
+
 The perimeter workflow requires the perimeter groups in the observation file to have a `time` attribute. The value of `sfire_ref_time` must use the same timezone convention as those perimeter times so that `TIGN_G` is converted to the correct elapsed seconds.
 
 The example only enables perimeter processing by default. Enable the other flags when the corresponding reference groups exist in the FireBench observation file and the required WRF-SFIRE variables are present in the model output.

@@ -279,6 +279,7 @@ def __process_weather_station(
     period_end_dt: datetime,
     fire_grid_bound: int,
     compression_lvl: int,
+    i_fmc_10h: int | None,
 ):
     STATION_ATTRS_TO_COPY = [
         "position_lat",
@@ -286,7 +287,6 @@ def __process_weather_station(
         "position_lat_units",
         "position_lon_units",
     ]
-    I_FMC_10h = 1
     time_in_period, time_origin = _time_in_period_seconds(
         obs_h5, station_path, period_start_dt, period_end_dt
     )
@@ -534,9 +534,13 @@ def __process_weather_station(
             min_dlat,
             min_dlon,
         )
+        if i_fmc_10h is None:
+            fmc10h_raw = wrf_dataset["FMC_GC"][i_start : i_end + 1, j_nearest, i_nearest]
+        else:
+            fmc10h_raw = wrf_dataset["FMC_GC"][i_start : i_end + 1, i_fmc_10h, j_nearest, i_nearest]
         sfire_fmc10h_interp = _interp_linear_1d_strict(
             time_sfire[i_start : i_end + 1],
-            wrf_dataset["FMC_GC"][i_start : i_end + 1, I_FMC_10h, j_nearest, i_nearest],
+            fmc10h_raw,
             time_in_period_sfire,
         )
         var = new_wx.create_dataset(
@@ -556,7 +560,14 @@ def get_weather_stations(
     period_end_dt: datetime,
     fire_grid_bound: int = 25,
     compression_lvl: int = 3,
+    i_fmc_10h: int | None = 1,
 ):
+    """Sample WRF-SFIRE weather variables at observation stations.
+
+    ``i_fmc_10h`` is the zero-based fuel-layer index for 10-hour fuel moisture
+    in a 4D ``FMC_GC`` field (time, fuel layer, y, x), defaulting to 1. Set it
+    to ``None`` for a 3D field (time, y, x) containing only 10-hour fuel moisture.
+    """
     origin = _datetime_fromisoformat_utc(sfire_ref_time)
     for ts in obs_h5[f"{fs.TIME_SERIES}"].keys():
         if ts.startswith("station_"):
@@ -571,4 +582,5 @@ def get_weather_stations(
                 period_end_dt,
                 fire_grid_bound,
                 compression_lvl,
+                i_fmc_10h,
             )
