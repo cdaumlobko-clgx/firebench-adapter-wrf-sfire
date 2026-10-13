@@ -71,6 +71,7 @@ perimeters:
 
 weather:
   enabled: false
+  i_fmc_10h: 1
 ```
 
 ## Processing Sections
@@ -98,3 +99,13 @@ The old script flags map directly to section settings:
 The perimeter workflow requires the perimeter groups in the observation file to have a `time` attribute. The value of `main.sfire_ref_time` must use the same timezone convention as those perimeter times so that `TIGN_G` is converted to the correct elapsed seconds.
 
 `main.start_dt` and `main.end_dt` are required when `weather.enabled` is `true`; include timezone offsets in both values.
+
+`weather.i_fmc_10h` defaults to `1`, the zero-based fuel-layer index for 10-hour fuel moisture in a 4D `FMC_GC` field `(time, fuel layer, y, x)`. Set another integer to select a different layer. If postprocessing adds `FMC_GC` as a 3D field `(time, y, x)` containing only 10-hour fuel moisture, use YAML `null`:
+
+```yaml
+weather:
+  enabled: true
+  i_fmc_10h: null
+```
+
+When calling the Python API directly, use `get_weather_stations(..., i_fmc_10h=None)` for the 3D layout; the default remains `i_fmc_10h=1`.

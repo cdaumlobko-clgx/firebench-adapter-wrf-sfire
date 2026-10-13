@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.abspath("../src"))
 project = "firebench-adapter-wrf-sfire"
 author = "WIRC SJSU"
 version = "0.1"
-release = "0.1-dev1"
+release = "0.1-dev2"
 copyright = "%Y, Aurelien Costes, WIRC SJSU"
 
 extensions = [

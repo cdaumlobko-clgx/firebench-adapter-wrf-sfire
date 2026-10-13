@@ -332,4 +332,5 @@ def _run_weather(
         end_dt,
         fire_grid_bound=int(section.get("fire_grid_bound", fire_grid_bound)),
         compression_lvl=int(section.get("compression_lvl", compression_lvl)),
+        i_fmc_10h=section.get("i_fmc_10h", 1),
     )

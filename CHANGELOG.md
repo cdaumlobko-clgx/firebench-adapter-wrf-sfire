@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1-dev2] - 2026-10-13
+
+### Added
+- Add configurable 10-hour fuel-moisture layer selection through `i_fmc_10h` in the Python API and `weather.i_fmc_10h` in YAML configuration, defaulting to layer 1.
+- Support postprocessed 3D `FMC_GC` fields containing only 10-hour fuel moisture with Python `None` or YAML `null`.
+
 ## [0.1-dev1] - 2026-08-07
 
 ### Added
@@ -44,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Store generated perimeter paths in POSIX form and avoid absolute paths in FireBench metadata.
 - Reuse existing perimeter KML files unless `overwrite=True`.
 
-[Unreleased]: https://github.com/wirc-sjsu/firebench-adapter-wrf-sfire/compare/0.1-dev1...HEAD
+[Unreleased]: https://github.com/wirc-sjsu/firebench-adapter-wrf-sfire/compare/0.1-dev2...HEAD
+[0.1-dev2]: https://github.com/wirc-sjsu/firebench-adapter-wrf-sfire/compare/0.1-dev1...0.1-dev2
 [0.1-dev1]: https://github.com/wirc-sjsu/firebench-adapter-wrf-sfire/compare/0.1-dev0...0.1-dev1
 [0.1-dev0]: https://github.com/wirc-sjsu/firebench-adapter-wrf-sfire/releases/tag/0.1-dev0
