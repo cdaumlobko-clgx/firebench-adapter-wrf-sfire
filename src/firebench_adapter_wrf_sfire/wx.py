@@ -316,14 +316,14 @@ def __process_weather_station(
 
     # get SFIRE data
     grid_slice = fire_grid_slice(fire_grid_bound)
-    xlat = np.array(wrf_dataset["XLAT"][0, grid_slice, grid_slice])
-    xlon = np.array(wrf_dataset["XLONG"][0, grid_slice, grid_slice])
+    xlat = np.array(wrf_dataset["XLAT"][0])
+    xlon = np.array(wrf_dataset["XLONG"][0])
     Ny, Nx = xlat.shape
     min_dlat = np.min(np.diff(xlat, axis=0))
     min_dlon = np.min(np.diff(xlon, axis=1))
 
-    fxlat = np.array(wrf_dataset["FXLAT"][0, grid_slice, grid_slice])
-    fxlon = np.array(wrf_dataset["FXLONG"][0, grid_slice, grid_slice])
+    fxlat = np.array(wrf_dataset["FXLAT"][0])
+    fxlon = np.array(wrf_dataset["FXLONG"][0])
     Nyf, Nxf = fxlat.shape
     min_dlatf = np.min(np.diff(fxlat, axis=0))
     min_dlonf = np.min(np.diff(fxlon, axis=1))
