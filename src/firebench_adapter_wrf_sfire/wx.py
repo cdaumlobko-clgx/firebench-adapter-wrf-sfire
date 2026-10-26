@@ -155,19 +155,11 @@ def _write_time_dataset_seconds(
     ds.attrs["time_units"] = "s"
 
 
-def _interp_linear_1d_strict(
-    x: np.ndarray, y: np.ndarray, xq: np.ndarray, period: float = None
-) -> np.ndarray:
+def _interp_linear_1d_strict(x: np.ndarray, y: np.ndarray, xq: np.ndarray) -> np.ndarray:
     """
     Linear interpolation with the same settings as your current usage:
     bounds_error=True, fill_value=np.nan, assume_sorted=True.
-
-    If `period` is given (e.g. 360 for degrees), `y` is treated as periodic: interpolation follows
-    the shortest path between consecutive samples (350 -> 10 passes through 0, not 180) and the
-    result is wrapped to [0, period).
     """
-    if period is not None:
-        y = np.unwrap(y, period=period)
     f = interp1d(
         x,
         y,
@@ -176,10 +168,7 @@ def _interp_linear_1d_strict(
         fill_value=np.nan,
         assume_sorted=True,
     )
-    yq = f(xq)
-    if period is not None:
-        yq = np.mod(yq, period)
-    return yq
+    return f(xq)
 
 
 def _sensor_height_check_ok(
