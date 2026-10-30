@@ -440,8 +440,8 @@ def __process_weather_station(
             )
             u_true = u10_raw * cosalpha_raw - v10_raw * sinalpha_raw
             v_true = u10_raw * sinalpha_raw + v10_raw * cosalpha_raw
-            u_interp = _interp_linear_1d_strict(time_sfire[i_start, i_end + 1], u_true, time_in_period_sfire)
-            v_interp = _interp_linear_1d_strict(time_sfire[i_start, i_end + 1], v_true, time_in_period_sfire)
+            u_interp = _interp_linear_1d_strict(time_sfire[i_start : i_end + 1], u_true, time_in_period_sfire)
+            v_interp = _interp_linear_1d_strict(time_sfire[i_start : i_end + 1], v_true, time_in_period_sfire)
             sfire_data_interp = wind_dir_from_uv(u_interp, v_interp)
             var = new_wx.create_dataset(
                 svn.WIND_DIRECTION.value,
