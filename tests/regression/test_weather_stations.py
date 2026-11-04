@@ -116,7 +116,7 @@ def test_weather_station_fmc_layouts(tmp_path, fmc_options, expected, entrypoint
 # > It then runs get_weather_stations with observations at 0, 60 and 120s.
 # > It expects 350°, 0° and 10° at those times.
 # > The comparison is done on the circle, so 0 and 360 count as the same direction and 180 does not.
-# >>>>
+# ---->
 def test_weather_station_wind_direction_interpolates_across_north(tmp_path):
     wrf_path = tmp_path / "wrfout.nc"
     obs_path = tmp_path / "obs.h5"
@@ -178,4 +178,4 @@ def test_weather_station_wind_direction_interpolates_across_north(tmp_path):
         # Compare on the circle: 0 and 360 are the same direction, 180 is not
         angular_error = (result[:] - np.array([350.0, 0.0, 10.0]) + 180.0) % 360.0 - 180.0
         np.testing.assert_allclose(angular_error, 0.0, atol=1e-6)
-# <<<<
+# <----
