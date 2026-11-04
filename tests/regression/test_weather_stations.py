@@ -109,7 +109,7 @@ def test_weather_station_fmc_layouts(tmp_path, fmc_options, expected, entrypoint
         assert result.attrs["units"] == "dimensionless"
         np.testing.assert_array_equal(out_h5[f"{station_path}/time"][:], obs_time)
 
-        
+
 @pytest.mark.parametrize("fire_grid_bound", [0, 1, 2])
 @pytest.mark.parametrize(
     "variable, fmc_layer",
@@ -228,7 +228,7 @@ def test_weather_station_reads_full_grid_cell_after_trimming(
 # > It then runs get_weather_stations with observations at 0, 60 and 120s.
 # > It expects 350°, 0° and 10° at those times.
 # > The comparison is done on the circle, so 0 and 360 count as the same direction and 180 does not.
-# START CLAUDE ---->
+# START AI ---->
 def test_weather_station_wind_direction_interpolates_across_north(tmp_path):
     wrf_path = tmp_path / "wrfout.nc"
     obs_path = tmp_path / "obs.h5"
@@ -290,4 +290,4 @@ def test_weather_station_wind_direction_interpolates_across_north(tmp_path):
         # Compare on the circle: 0 and 360 are the same direction, 180 is not
         angular_error = (result[:] - np.array([350.0, 0.0, 10.0]) + 180.0) % 360.0 - 180.0
         np.testing.assert_allclose(angular_error, 0.0, atol=1e-6)
-# <---- END CLAUDE
+# <---- END AI
