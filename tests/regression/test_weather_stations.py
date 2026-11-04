@@ -108,3 +108,74 @@ def test_weather_station_fmc_layouts(tmp_path, fmc_options, expected, entrypoint
         np.testing.assert_allclose(result[:], expected)
         assert result.attrs["units"] == "dimensionless"
         np.testing.assert_array_equal(out_h5[f"{station_path}/time"][:], obs_time)
+
+# Unit test created with Claude AI:
+# Add a test to tests/regression/test_weather_stations.py for function __process_weather_station() case `if svn.WIND_DIRECTION.value in station.keys():`.
+# Test that interpolation of wind direction between 350 and 10 is 0 and not 180.
+# > The test builds a synthetic WRF file whose U10/V10 give a wind direction of 350° at the first model time and 10° at the second.
+# > It then runs get_weather_stations with observations at 0, 60 and 120s.
+# > It expects 350°, 0° and 10° at those times.
+# > The comparison is done on the circle, so 0 and 360 count as the same direction and 180 does not.
+# >>>>
+def test_weather_station_wind_direction_interpolates_across_north(tmp_path):
+    wrf_path = tmp_path / "wrfout.nc"
+    obs_path = tmp_path / "obs.h5"
+    out_path = tmp_path / "model.h5"
+    station_path = f"{TIME_SERIES}/station_1"
+    wd_name = svn.WIND_DIRECTION.value
+    origin = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    obs_time = np.array([0.0, 60.0, 120.0])
+
+    # Model wind direction goes from 350 to 10 degrees, i.e. through north
+    wd_model = np.radians([350.0, 10.0])
+    speed = 5.0
+    u10 = -speed * np.sin(wd_model)
+    v10 = -speed * np.cos(wd_model)
+
+    with Dataset(wrf_path, "w") as wrf:
+        wrf.createDimension("Time", 2)
+        wrf.createDimension("south_north", 4)
+        wrf.createDimension("west_east", 4)
+        dims = ("Time", "south_north", "west_east")
+        lat = np.broadcast_to(np.arange(38.0, 42.0)[:, None], (4, 4))
+        lon = np.broadcast_to(np.arange(-122.0, -118.0)[None, :], (4, 4))
+        for name, values in (("XLAT", lat), ("XLONG", lon), ("FXLAT", lat), ("FXLONG", lon)):
+            wrf.createVariable(name, "f8", dims)[:] = np.broadcast_to(values, (2, 4, 4))
+        wrf.createVariable("XTIME", "f8", ("Time",))[:] = [0.0, 2.0]
+        wrf.createVariable("U10", "f8", dims)[:] = np.broadcast_to(u10[:, None, None], (2, 4, 4))
+        wrf.createVariable("V10", "f8", dims)[:] = np.broadcast_to(v10[:, None, None], (2, 4, 4))
+
+    with h5py.File(obs_path, "w") as obs_h5:
+        station = obs_h5.create_group(station_path)
+        station.attrs["position_lat"] = 39.0
+        station.attrs["position_lon"] = -121.0
+        time = station.create_dataset("time", data=obs_time)
+        time.attrs["time_origin"] = origin.isoformat()
+        time.attrs["time_units"] = "s"
+        wd = station.create_dataset(wd_name, data=np.zeros_like(obs_time))
+        wd.attrs["sensor_height"] = 10.0
+        wd.attrs["sensor_height_units"] = "m"
+
+    with (
+        h5py.File(out_path, "w") as new_h5,
+        h5py.File(obs_path, "r") as obs_h5,
+        Dataset(wrf_path, "r") as wrf,
+    ):
+        get_weather_stations(
+            new_h5,
+            obs_h5,
+            wrf,
+            origin.isoformat(),
+            origin,
+            origin + timedelta(seconds=120),
+            fire_grid_bound=1,
+            compression_lvl=1,
+        )
+
+    with h5py.File(out_path, "r") as out_h5:
+        result = out_h5[f"{station_path}/{wd_name}"]
+        assert result.attrs["units"] == "degree"
+        # Compare on the circle: 0 and 360 are the same direction, 180 is not
+        angular_error = (result[:] - np.array([350.0, 0.0, 10.0]) + 180.0) % 360.0 - 180.0
+        np.testing.assert_allclose(angular_error, 0.0, atol=1e-6)
+# <<<<
